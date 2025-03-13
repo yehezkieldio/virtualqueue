@@ -15,7 +15,8 @@
         "elysia": "^1.2.25"
     },
     "devDependencies": {
-        "@virtualqueue/typescript": "workspace:*"
+        "@virtualqueue/typescript": "workspace:*",
+        "typescript": "^5.8.2"
     },
     "imports": {
         "#utils/*": "./src/utils/*.ts"

@@ -22,6 +22,7 @@
       },
       "devDependencies": {
         "@virtualqueue/typescript": "workspace:*",
+        "typescript": "^5.8.2",
       },
     },
     "packages/database": {
