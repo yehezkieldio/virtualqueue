@@ -10,12 +10,13 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "@virtualqueue/typescript": "workspace:*",
+        "@virtualqueue/environment": "workspace:*",
         "@paralleldrive/cuid2": "^2.2.2",
         "drizzle-orm": "^0.40.0",
         "postgres": "^3.4.5"
     },
     "devDependencies": {
+        "@virtualqueue/typescript": "workspace:*",
         "drizzle-kit": "^0.30.5"
     },
     "exports": {

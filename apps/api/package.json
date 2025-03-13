@@ -1,0 +1,19 @@
+{
+    "name": "@virtualqueue/api",
+    "type": "module",
+    "module": "src/main.ts",
+    "version": "0.0.0",
+    "scripts": {
+        "typecheck": "tsc --noEmit",
+        "start": "bun --env-file ../../.env ."
+    },
+    "dependencies": {
+        "@amarislabs/logger": "^1.2.1",
+        "@virtualqueue/database": "workspace:*",
+        "@virtualqueue/environment": "workspace:*",
+        "elysia": "^1.2.25"
+    },
+    "devDependencies": {
+        "@virtualqueue/typescript": "workspace:*"
+    }
+}
