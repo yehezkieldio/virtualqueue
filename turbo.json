@@ -5,7 +5,13 @@
         "build": {
             "dependsOn": ["^build"],
             "inputs": ["$TURBO_DEFAULT$", ".env*"],
-            "outputs": ["dist/**"]
+            "outputs": [
+                "build/**",
+                ".vercel/**",
+                "dist/**",
+                ".next/**",
+                "!.next/cache/**"
+            ]
         },
         "typecheck": {
             "dependsOn": ["^typecheck"]
@@ -26,10 +32,19 @@
         "db:migrate": {
             "cache": false
         },
-        "start": {
-            "persistent": true,
-            "dependsOn": ["build"],
-            "cache": false
+        "start:web:dev": {
+            "dependsOn": ["^build"],
+            "cache": false,
+            "persistent": true
+        },
+        "start:web": {
+            "inputs": ["$TURBO_DEFAULT$", ".env"],
+            "persistent": true
+        },
+        "start:api:dev": {
+            "dependsOn": ["^build"],
+            "cache": false,
+            "persistent": true
         },
         "start:api": {
             "inputs": ["$TURBO_DEFAULT$", ".env"],
