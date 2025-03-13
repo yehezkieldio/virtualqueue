@@ -1,0 +1,1 @@
+CREATE MATERIALIZED VIEW "public"."popular_events" AS (select "event_id", cast(count(*) as int) as "ticket_count" from "ticket" group by "ticket"."event_id" order by "ticket_count" desc);

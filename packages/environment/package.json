@@ -1,0 +1,18 @@
+{
+    "name": "@virtualqueue/environment",
+    "version": "0.0.0",
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@t3-oss/env-core": "^0.12.0",
+        "zod": "^3.24.2"
+    },
+    "devDependencies": {
+        "@virtualqueue/typescript": "workspace:*",
+        "typescript": "^5"
+    },
+    "exports": {
+        ".": "./env.ts"
+    }
+}

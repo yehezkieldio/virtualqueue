@@ -1,0 +1,25 @@
+{
+    "name": "@virtualqueue/database",
+    "version": "0.0.0",
+    "scripts": {
+        "db:push": "bun --env-file ../../.env drizzle-kit push",
+        "db:studio": "bun --env-file ../../.env drizzle-kit studio",
+        "db:generate": "bun --env-file ../../.env drizzle-kit generate",
+        "db:drop": "bun --env-file ../../.env drizzle-kit drop",
+        "db:migrate": "bun --env-file ../../.env drizzle-kit migrate",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@virtualqueue/typescript": "workspace:*",
+        "@paralleldrive/cuid2": "^2.2.2",
+        "drizzle-orm": "^0.40.0",
+        "postgres": "^3.4.5"
+    },
+    "devDependencies": {
+        "drizzle-kit": "^0.30.5"
+    },
+    "exports": {
+        ".": "./src/drizzle.ts",
+        "./schema": "./src/schema.ts"
+    }
+}

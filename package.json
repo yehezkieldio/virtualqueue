@@ -1,0 +1,36 @@
+{
+    "name": "@virtualqueue/source",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "build": "turbo build",
+        "start:web": "turbo start --filter @virtualqueue/web",
+        "start:api": "turbo start --filter @virtualqueue/api",
+        "db:push": "turbo db:push",
+        "db:studio": "turbo db:studio",
+        "db:generate": "turbo db:generate",
+        "db:drop": "turbo db:drop",
+        "db:migrate": "turbo db:migrate",
+        "typecheck": "turbo typecheck",
+        "format": "biome format . --write",
+        "lint": "biome check .",
+        "compose:dev:up": "docker compose -f docker-compose.yml --profile development up -d",
+        "compose:dev:down": "docker compose -f docker-compose.yml --profile development down",
+        "compose:dev:logs": "docker compose -f docker-compose.yml --profile development logs",
+        "compose:obs:up": "docker compose -f docker-compose.yml --profile observability up -d",
+        "compose:obs:down": "docker compose -f docker-compose.yml --profile observability down",
+        "compose:obs:logs": "docker compose -f docker-compose.yml --profile observability logs",
+        "compose:all:up": "docker compose -f docker-compose.yml --profile development --profile observability up -d ",
+        "compose:all:down": "docker compose -f docker-compose.yml --profile development --profile observability down",
+        "compose:all:logs": "docker compose -f docker-compose.yml --profile development --profile observability logs"
+    },
+    "workspaces": ["apps/*", "packages/*"],
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@types/bun": "^1.2.5",
+        "@types/node": "^22.13.10",
+        "turbo": "^2.4.4",
+        "typescript": "^5.8.2"
+    },
+    "packageManager": "bun@1.2.6"
+}

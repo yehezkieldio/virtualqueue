@@ -1,0 +1,43 @@
+{
+    "$schema": "https://turbo.build/schema.json",
+    "ui": "tui",
+    "tasks": {
+        "build": {
+            "dependsOn": ["^build"],
+            "inputs": ["$TURBO_DEFAULT$", ".env*"],
+            "outputs": ["dist/**"]
+        },
+        "typecheck": {
+            "dependsOn": ["^typecheck"]
+        },
+        "db:push": {
+            "cache": false
+        },
+        "db:studio": {
+            "persistent": true,
+            "cache": false
+        },
+        "db:generate": {
+            "cache": false
+        },
+        "db:drop": {
+            "cache": false
+        },
+        "db:migrate": {
+            "cache": false
+        },
+        "start": {
+            "persistent": true,
+            "dependsOn": ["build"],
+            "cache": false
+        },
+        "//#format": {
+            "cache": false
+        },
+        "//#lint": {
+            "cache": false
+        }
+    },
+    "globalDependencies": [".env"],
+    "globalPassThroughEnv": ["NODE_ENV"]
+}
