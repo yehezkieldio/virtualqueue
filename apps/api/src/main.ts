@@ -1,6 +1,6 @@
 import { env } from "@virtualqueue/environment";
 import { Elysia } from "elysia";
-import { logger } from "./utils/logger";
+import { logger } from "#utils/logger";
 
 logger.info("Starting API server...");
 

@@ -32,7 +32,8 @@
             "cache": false
         },
         "start:api": {
-            "inputs": ["$TURBO_DEFAULT$", ".env"]
+            "inputs": ["$TURBO_DEFAULT$", ".env"],
+            "persistent": true
         },
         "//#format": {
             "cache": false

@@ -23,7 +23,7 @@ services:
     container_name: virtualqueue-prometheus
     profiles: [observability]
     volumes:
-      - ./prometheus:/etc/prometheus
+      - ./o11y/prometheus:/etc/prometheus
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -52,8 +52,8 @@ services:
     profiles: [observability]
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      # - ./o11y/grafana/provisioning:/etc/grafana/provisioning
+      # - ./o11y/grafana/dashboards:/var/lib/grafana/dashboards
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin

@@ -4,6 +4,7 @@
     "module": "src/main.ts",
     "version": "0.0.0",
     "scripts": {
+        "_build": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile dist/api ./src/main.ts",
         "typecheck": "tsc --noEmit",
         "start": "bun --env-file ../../.env ."
     },
@@ -15,5 +16,8 @@
     },
     "devDependencies": {
         "@virtualqueue/typescript": "workspace:*"
+    },
+    "imports": {
+        "#utils/*": "./src/utils/*.ts"
     }
 }
