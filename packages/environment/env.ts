@@ -11,7 +11,7 @@ export const env = createEnv({
         NODE_ENV: z.enum(["development", "production"]).default("development"),
         DATABASE_URL: z.string().url(),
         API_HOST: z.string().default("localhost"),
-        API_PORT: z.string().default("3000"),
+        API_PORT: z.string().default("3001"),
     },
     clientPrefix: "PUBLIC_",
     client: {},
