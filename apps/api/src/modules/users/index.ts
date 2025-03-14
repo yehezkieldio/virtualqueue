@@ -10,8 +10,8 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
             "user.paginated": t.Object({
                 data: t.Array(t.Omit(selectUserSchema, ["password", "deletedAt"])),
                 meta: t.Object({
-                    page: t.Number(),
-                    limit: t.Number(),
+                    page: t.Number({ minimum: 1, default: 1 }),
+                    limit: t.Number({ minimum: 1, default: 10 }),
                     totalItems: t.Number(),
                     totalPages: t.Number(),
                     hasNext: t.Boolean(),
@@ -22,8 +22,8 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .get(
             "/",
             async ({ query }) => {
-                const page = Number(query.page) || 1;
-                const limit = Number(query.limit) || 10;
+                const page = Math.max(1, Number(query.page) || 1);
+                const limit = Math.max(1, Number(query.limit) || 10);
                 const search = query.search as string | undefined;
                 const role = query.role as string | undefined;
                 const sortBy = (query.sortBy as string) || "createdAt";
@@ -83,8 +83,8 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
             },
             {
                 query: t.Object({
-                    page: t.Optional(t.String()),
-                    limit: t.Optional(t.String()),
+                    page: t.Optional(t.String({ pattern: "^[1-9][0-9]*$" })),
+                    limit: t.Optional(t.String({ pattern: "^[1-9][0-9]*$" })),
                     search: t.Optional(t.String()),
                     role: t.Optional(t.String()),
                     sortBy: t.Optional(t.String()),
