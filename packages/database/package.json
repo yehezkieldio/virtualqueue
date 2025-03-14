@@ -23,6 +23,9 @@
         "@virtualqueue/typescript": "workspace:*",
         "drizzle-kit": "^0.30.5"
     },
+    "override": {
+        "@sinclair/typebox": "0.32.27"
+    },
     "exports": {
         ".": "./src/drizzle.ts",
         "./schema": "./src/schema.ts"

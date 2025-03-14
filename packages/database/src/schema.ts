@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { type SQL, and, isNull, relations, sql } from "drizzle-orm";
+import { type InferSelectModel, type SQL, and, isNull, relations, sql } from "drizzle-orm";
 import {
     boolean,
     check,
@@ -14,7 +14,7 @@ import {
     uuid,
     varchar,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-typebox";
+import { createSelectSchema } from "drizzle-typebox";
 
 export const notDeleted = <T extends { deletedAt: unknown }>(table: T) => isNull(table.deletedAt as unknown as SQL);
 
@@ -40,7 +40,7 @@ export const users = pgTable(
         role: roles("role").notNull().default("USER"),
         phone: varchar("phone", { length: 20 }),
         lastLogin: timestamp("last_login"),
-        preferences: jsonb("preferences"),
+        preferences: jsonb("preferences").$type<string[]>(),
         createdAt: timestamp("created_at").defaultNow(),
         updatedAt: timestamp("updated_at").defaultNow(),
         deletedAt: timestamp("deleted_at"),
@@ -55,9 +55,9 @@ export const users = pgTable(
     ]
 );
 
-export const selectUserSchema = createSelectSchema(users);
-export const insertUserSchema = createInsertSchema(users);
-export const updateUserSchema = createUpdateSchema(users);
+export type SelectUser = InferSelectModel<typeof users>;
+
+export const _selectUser = createSelectSchema(users);
 
 export const events = pgTable(
     "event",

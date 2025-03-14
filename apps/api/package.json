@@ -19,6 +19,9 @@
         "@virtualqueue/typescript": "workspace:*",
         "typescript": "^5.8.2"
     },
+    "override": {
+        "@sinclair/typebox": "0.32.27"
+    },
     "imports": {
         "#utils/*": "./src/utils/*.ts"
     }

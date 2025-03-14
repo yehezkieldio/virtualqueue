@@ -1,14 +1,14 @@
 import { type SQLWrapper, and, asc, db, desc, eq, ilike, isNull, sql } from "@virtualqueue/database";
-import { type RolesType, selectUserSchema, users } from "@virtualqueue/database/schema";
+import { type RolesType, _selectUser, users } from "@virtualqueue/database/schema";
 import Elysia, { t } from "elysia";
 
 export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).group("/users", (api) =>
     api
         .model({
-            "user.many": t.Array(t.Omit(selectUserSchema, ["password", "deletedAt"])),
-            "user.one": t.Omit(selectUserSchema, ["password", "deletedAt"]),
+            "user.many": t.Array(t.Omit(_selectUser, ["password", "deletedAt"])),
+            "user.one": t.Omit(_selectUser, ["password", "deletedAt"]),
             "user.paginated": t.Object({
-                data: t.Array(t.Omit(selectUserSchema, ["password", "deletedAt"])),
+                data: t.Array(t.Omit(_selectUser, ["password", "deletedAt"])),
                 meta: t.Object({
                     page: t.Number({ minimum: 1, default: 1 }),
                     limit: t.Number({ minimum: 1, default: 10 }),
