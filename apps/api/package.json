@@ -6,10 +6,11 @@
     "scripts": {
         "_build": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile dist/api ./src/main.ts",
         "typecheck": "tsc --noEmit",
-        "start": "bun --env-file ../../.env ."
+        "start:api": "bun --env-file ../../.env ."
     },
     "dependencies": {
         "@amarislabs/logger": "^1.2.1",
+        "@elysiajs/swagger": "^1.2.2",
         "@virtualqueue/database": "workspace:*",
         "@virtualqueue/environment": "workspace:*",
         "elysia": "^1.2.25"
