@@ -82,14 +82,30 @@ export function useLoggerMiddleware() {
             const error = ctx.error;
 
             const method: string = c("bold")(ctx.request.method.padEnd(4));
-            const url: string = c("white")(new URL(ctx.request.url).pathname.padEnd(4));
+            let url: string = c("white")(new URL(ctx.request.url).pathname.padEnd(4));
             const statusCode: string = formatStatus(ctx.set.status);
             const duration: string = c("gray")(`${formatTime(Date.now() - (ctx.startTime || Date.now()))}`);
+
+            const { headers, body, query, params, cookie } = ctx;
+            if (query) {
+                const params = new URLSearchParams();
+
+                // Only add parameters that have valid values
+                for (const [key, value] of Object.entries(query)) {
+                    if (value !== undefined && value !== null && value !== "") {
+                        params.append(key, String(value));
+                    }
+                }
+
+                const queryString = params.toString();
+                if (queryString) {
+                    url += `?${queryString}`;
+                }
+            }
 
             logger.error(`${method} ${url} ${statusCode} ${duration}`);
             logger.trace("Error: ", error);
 
-            const { headers, body, query, params, cookie } = ctx;
             const requestData = {
                 ...(headers && { headers }),
                 ...(body !== undefined && { body }),
