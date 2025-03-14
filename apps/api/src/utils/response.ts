@@ -33,7 +33,19 @@ export const PaginationMetaSchema = t.Object({
     page: t.Optional(
         t.String({ pattern: "^[1-9][0-9]*$", default: "1", description: "Page number.", minLength: 0, maxLength: 100 })
     ),
-    limit: t.Optional(t.String({ pattern: "^[1-9][0-9]*$", default: "10", description: "Number of items per page." })),
+    limit: t.Optional(
+        t.String({
+            pattern: "^[1-9][0-9]*$",
+            default: "10",
+            description: "Number of items per page.",
+            minLength: 1,
+            maxLength: 3,
+            transform: (v: string): string => {
+                const num: number = Number.parseInt(v);
+                return num > 100 ? "100" : v;
+            },
+        })
+    ),
     search: t.Optional(
         t.String({
             description: "Search by user fullname or email.",
