@@ -12,6 +12,11 @@ async function main() {
     const hashedPassword = await Bun.password.hash("password123");
     const users: InferSelectModel<typeof schema.users>[] = [];
     for (let i = 1; i <= 10; i++) {
+        const generateIndonesianPhoneNumber = () => {
+            const randomNumber = Math.floor(Math.random() * 1000000000);
+            return `+62${randomNumber}`;
+        };
+
         users.push({
             id: createId(),
             email: `user${i}@example.com`,
@@ -21,7 +26,10 @@ async function main() {
             createdAt: new Date(),
             updatedAt: new Date(),
             photo: null,
+            lastLogin: null,
+            phone: generateIndonesianPhoneNumber(),
             deletedAt: null,
+            preferences: null,
         });
     }
 

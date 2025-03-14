@@ -1,7 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
-import { sql } from "drizzle-orm";
+import { type SQL, and, isNull, relations, sql } from "drizzle-orm";
 import {
     boolean,
+    check,
     index,
     integer,
     jsonb,
@@ -14,6 +15,11 @@ import {
     varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-typebox";
+
+export const notDeleted = <T extends { deletedAt: unknown }>(table: T) => isNull(table.deletedAt as unknown as SQL);
+
+export const withNotDeleted = <T extends { deletedAt: unknown }>(table: T, conditions?: SQL[]) =>
+    conditions ? and(notDeleted(table), ...conditions) : notDeleted(table);
 
 export const roles = pgEnum("roles", ["USER", "ADMIN", "SUPERADMIN"]);
 export type RolesType = (typeof roles.enumValues)[number];
@@ -32,6 +38,9 @@ export const users = pgTable(
         fullname: varchar("name", { length: 255 }).notNull(),
         photo: varchar("photo", { length: 255 }),
         role: roles("role").notNull().default("USER"),
+        phone: varchar("phone", { length: 20 }),
+        lastLogin: timestamp("last_login"),
+        preferences: jsonb("preferences"),
         createdAt: timestamp("created_at").defaultNow(),
         updatedAt: timestamp("updated_at").defaultNow(),
         deletedAt: timestamp("deleted_at"),
@@ -78,6 +87,7 @@ export const events = pgTable(
         index("event_is_active_idx").on(table.isActive),
         index("event_deleted_at_idx").on(table.deletedAt),
         index("event_date_range_idx").on(table.startDate, table.endDate),
+        check("event_dates_check", sql`${table.endDate} > ${table.startDate}`),
     ]
 );
 
@@ -138,6 +148,21 @@ export const queues = pgTable(
         index("queue_deleted_at_idx").on(table.deletedAt),
     ]
 );
+
+export const usersRelations = relations(users, ({ many }) => ({
+    events: many(events, { relationName: "creator" }),
+    tickets: many(tickets),
+    queueItems: many(queueItems),
+}));
+
+export const eventsRelations = relations(events, ({ one, many }) => ({
+    creator: one(users, {
+        fields: [events.creatorId],
+        references: [users.id],
+    }),
+    tickets: many(tickets),
+    queues: many(queues),
+}));
 
 export const queueItemStatusEnum = pgEnum("queue_item_status", ["WAITING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);
 
@@ -215,6 +240,24 @@ export const webhooks = pgTable(
         createdAt: timestamp("created_at").defaultNow(),
     },
     (table) => [index("webhook_event_id_idx").on(table.eventId), index("webhook_is_active_idx").on(table.isActive)]
+);
+
+export const queueAnalytics = pgMaterializedView("queue_analytics").as((qb) =>
+    qb
+        .select({
+            queueId: queueItems.queueId,
+            avgWaitTime: sql<number>`
+                avg(extract(epoch from (${queueItems.updatedAt} - ${queueItems.createdAt})))/60
+            `.as("avg_wait_minutes"),
+            totalCompleted: sql<number>`
+                count(case when ${queueItems.status} = 'COMPLETED' then 1 end)
+            `.as("completed_count"),
+            totalCancelled: sql<number>`
+                count(case when ${queueItems.status} = 'CANCELLED' then 1 end)
+            `.as("cancelled_count"),
+        })
+        .from(queueItems)
+        .groupBy(queueItems.queueId)
 );
 
 export const popularEvents = pgMaterializedView("popular_events").as((qb) =>
