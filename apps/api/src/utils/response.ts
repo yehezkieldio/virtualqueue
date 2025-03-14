@@ -30,7 +30,9 @@ export const ErrorResponseSchema = t.Composite([
 export type ErrorResponse = Static<typeof ErrorResponseSchema>;
 
 export const PaginationMetaSchema = t.Object({
-    page: t.Optional(t.String({ pattern: "^[1-9][0-9]*$", default: "1", description: "Page number." })),
+    page: t.Optional(
+        t.String({ pattern: "^[1-9][0-9]*$", default: "1", description: "Page number.", minLength: 0, maxLength: 100 })
+    ),
     limit: t.Optional(t.String({ pattern: "^[1-9][0-9]*$", default: "10", description: "Number of items per page." })),
     search: t.Optional(
         t.String({
