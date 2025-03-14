@@ -1,4 +1,4 @@
-import { type Static, t } from "elysia";
+import { type Static, type TSchema, t } from "elysia";
 
 const BaseResponseSchema = t.Object({
     path: t.String(),
@@ -10,6 +10,7 @@ export const SuccessResponseSchema = t.Composite([
     BaseResponseSchema,
     t.Object({
         data: t.Any(),
+        meta: t.Any(),
         status: t.Union([t.Number(), t.String()]),
     }),
 ]);
@@ -58,7 +59,7 @@ export const PaginationMetaSchema = t.Object({
     ),
 });
 
-export const PaginationMetaModelOutput = t.Object({
+export const PaginationModelSchema = t.Object({
     page: t.Number({ minimum: 1, default: 1 }),
     limit: t.Number({ minimum: 1, default: 10 }),
     totalItems: t.Number(),
@@ -66,3 +67,9 @@ export const PaginationMetaModelOutput = t.Object({
     hasNext: t.Boolean(),
     hasPrev: t.Boolean(),
 });
+
+export const createPaginatedResponseSchema = <T extends TSchema>(dataSchema: T) =>
+    t.Object({
+        data: t.Array(dataSchema),
+        meta: PaginationModelSchema,
+    });

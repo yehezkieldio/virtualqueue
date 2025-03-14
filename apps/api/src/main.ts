@@ -4,6 +4,7 @@ import { Elysia, t } from "elysia";
 import type { Server } from "elysia/universal";
 import { logger } from "#utils/logger";
 import { useLoggerMiddleware } from "./middlewares/logger";
+import { useResponseMapperMiddleware } from "./middlewares/response-mapper";
 import { usersModule } from "./modules/users";
 
 logger.info("Starting API server...");
@@ -54,6 +55,7 @@ const swaggerConfig = {
 
 export const api = new Elysia()
     .use(useLoggerMiddleware())
+    .use(useResponseMapperMiddleware())
     .use(swagger(swaggerConfig))
     .use(healthModule)
     .use(usersModule);

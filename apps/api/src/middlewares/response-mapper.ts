@@ -34,10 +34,21 @@ export function useResponseMapperMiddleware() {
             const response = ctx.response;
             const status = ctx.set.status ?? 200;
 
+            // Check if response is an object with data and meta properties
+            const hasDataAndMeta = response && typeof response === "object" && "data" in response && "meta" in response;
+
             const _response = {
                 path: path,
                 message: message,
-                data: response,
+                ...(hasDataAndMeta
+                    ? {
+                          data: response.data,
+                          meta: response.meta,
+                      }
+                    : {
+                          data: response,
+                          meta: {},
+                      }),
                 status: status,
                 timestamp: timestamp,
             } satisfies SuccessResponse;
