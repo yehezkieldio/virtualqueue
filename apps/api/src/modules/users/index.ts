@@ -1,6 +1,7 @@
 import { type SQLWrapper, and, asc, db, desc, eq, ilike, isNull, sql } from "@virtualqueue/database";
 import { type RolesType, _selectUser, users } from "@virtualqueue/database/schema";
 import Elysia, { t } from "elysia";
+import { PaginationMetaModelOutput, PaginationMetaSchema } from "#utils/response";
 
 export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).group("/users", (api) =>
     api
@@ -9,14 +10,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
             "user.one": t.Omit(_selectUser, ["password", "deletedAt"]),
             "user.paginated": t.Object({
                 data: t.Array(t.Omit(_selectUser, ["password", "deletedAt"])),
-                meta: t.Object({
-                    page: t.Number({ minimum: 1, default: 1 }),
-                    limit: t.Number({ minimum: 1, default: 10 }),
-                    totalItems: t.Number(),
-                    totalPages: t.Number(),
-                    hasNext: t.Boolean(),
-                    hasPrev: t.Boolean(),
-                }),
+                meta: PaginationMetaModelOutput,
             }),
         })
         .get(
@@ -82,14 +76,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 };
             },
             {
-                query: t.Object({
-                    page: t.Optional(t.String({ pattern: "^[1-9][0-9]*$" })),
-                    limit: t.Optional(t.String({ pattern: "^[1-9][0-9]*$" })),
-                    search: t.Optional(t.String()),
-                    role: t.Optional(t.String()),
-                    sortBy: t.Optional(t.String()),
-                    sortOrder: t.Optional(t.String()),
-                }),
+                query: PaginationMetaSchema,
                 response: "user.paginated",
                 detail: {
                     description: "View all users.",

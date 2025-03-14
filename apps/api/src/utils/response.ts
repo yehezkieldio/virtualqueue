@@ -27,3 +27,42 @@ export const ErrorResponseSchema = t.Composite([
 ]);
 
 export type ErrorResponse = Static<typeof ErrorResponseSchema>;
+
+export const PaginationMetaSchema = t.Object({
+    page: t.Optional(t.String({ pattern: "^[1-9][0-9]*$", default: "1", description: "Page number." })),
+    limit: t.Optional(t.String({ pattern: "^[1-9][0-9]*$", default: "10", description: "Number of items per page." })),
+    search: t.Optional(
+        t.String({
+            description: "Search by user fullname or email.",
+            minLength: 3,
+            maxLength: 100,
+        })
+    ),
+    role: t.Optional(
+        t.String({
+            description: "Filter by user role.",
+            enum: ["USER", "ADMIN", "SUPERADMIN"],
+        })
+    ),
+    sortBy: t.Optional(
+        t.String({
+            description: "Sort by field, either 'fullname', 'email', or 'createdAt'.",
+            enum: ["fullname", "email", "createdAt"],
+        })
+    ),
+    sortOrder: t.Optional(
+        t.String({
+            description: "Sort order, either 'asc' or 'desc'.",
+            enum: ["asc", "desc"],
+        })
+    ),
+});
+
+export const PaginationMetaModelOutput = t.Object({
+    page: t.Number({ minimum: 1, default: 1 }),
+    limit: t.Number({ minimum: 1, default: 10 }),
+    totalItems: t.Number(),
+    totalPages: t.Number(),
+    hasNext: t.Boolean(),
+    hasPrev: t.Boolean(),
+});
