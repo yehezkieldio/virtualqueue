@@ -17,7 +17,7 @@ async function main() {
             email: `user${i}@example.com`,
             password: hashedPassword,
             fullname: `Test User ${i}`,
-            role: i === 1 ? "ADMIN" : i === 2 ? "SUPERADMIN" : "USER", // First as admin, second as superadmin, rest as regular users
+            role: i === 1 ? "ADMIN" : i === 2 ? "SUPERADMIN" : "USER",
             createdAt: new Date(),
             updatedAt: new Date(),
             photo: null,
@@ -29,7 +29,6 @@ async function main() {
     await db.insert(schema.users).values(users).onConflictDoNothing({ target: schema.users.email });
 
     console.log("Database seeded successfully.");
-
     connection.end();
 }
 
