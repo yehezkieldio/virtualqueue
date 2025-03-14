@@ -14,6 +14,8 @@ import {
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-typebox";
 
 export const roles = pgEnum("roles", ["USER", "ADMIN", "SUPERADMIN"]);
+export type RolesType = (typeof roles.enumValues)[number];
+
 export const ticketStatus = pgEnum("ticket_status", ["ACTIVE", "USED", "EXPIRED", "CANCELLED"]);
 export const queuePriority = pgEnum("queue_priority", ["VIP", "REGULAR", "PRIORITY"]);
 

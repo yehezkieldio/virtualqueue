@@ -11,3 +11,4 @@ export const connection: postgres.Sql = globalForDb.connection ?? postgres(env.D
 if (env.NODE_ENV !== "production") globalForDb.connection = connection;
 
 export const db: PostgresJsDatabase<typeof schema> = drizzle(connection, { schema });
+export * from "drizzle-orm";
