@@ -32,6 +32,12 @@
         "db:migrate": {
             "cache": false
         },
+        "db:seed": {
+            "cache": false
+        },
+        "db:reset": {
+            "cache": false
+        },
         "start": {
             "persistent": true,
             "dependsOn": ["build"],

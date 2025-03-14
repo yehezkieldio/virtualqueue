@@ -11,6 +11,7 @@ import {
     uuid,
     varchar,
 } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-typebox";
 
 export const roles = pgEnum("roles", ["USER", "ADMIN", "SUPERADMIN"]);
 export const ticketStatus = pgEnum("ticket_status", ["ACTIVE", "USED", "EXPIRED", "CANCELLED"]);
@@ -29,6 +30,9 @@ export const users = pgTable("user", {
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"),
 });
+
+export const selectUserSchema = createSelectSchema(users);
+export const insertUserSchema = createInsertSchema(users);
 
 export const events = pgTable("event", {
     id: varchar("id", { length: 24 })

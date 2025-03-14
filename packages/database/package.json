@@ -7,12 +7,16 @@
         "db:generate": "bun --env-file ../../.env drizzle-kit generate",
         "db:drop": "bun --env-file ../../.env drizzle-kit drop",
         "db:migrate": "bun --env-file ../../.env drizzle-kit migrate",
+        "db:seed": "bun --env-file ../../.env ./src/seed.ts",
+        "db:reset": "bun --env-file ../../.env ./src/reset.ts",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "@virtualqueue/environment": "workspace:*",
         "@paralleldrive/cuid2": "^2.2.2",
+        "@virtualqueue/environment": "workspace:*",
         "drizzle-orm": "^0.40.0",
+        "drizzle-seed": "^0.3.1",
+        "drizzle-typebox": "^0.3.0",
         "postgres": "^3.4.5"
     },
     "devDependencies": {
