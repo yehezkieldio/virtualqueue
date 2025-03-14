@@ -96,4 +96,38 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 },
             }
         )
+        .get(
+            "/:id",
+            async (ctx) => {
+                const user = await db.query.users.findFirst({
+                    where: eq(users.id, ctx.params.id),
+                    columns: {
+                        password: false,
+                        deletedAt: false,
+                    },
+                });
+
+                if (!user) {
+                    throw ctx.error("Not Found", "User not found.");
+                }
+
+                return user;
+            },
+            {
+                params: t.Object({
+                    id: t.String({
+                        description: "The ID of the user to view.",
+                    }),
+                }),
+                response: {
+                    200: "user.one",
+                    404: t.String({
+                        default: "User not found.",
+                    }),
+                },
+                detail: {
+                    description: "View user by ID.",
+                },
+            }
+        )
 );
