@@ -14,6 +14,15 @@ export const authMiddleware = new Elysia({ name: "Middleware.Auth" }).use(
             throw error("Unauthorized", "Unauthorized");
         }
 
+        const isBlacklisted = await record("dragonfly.blacklist.check", async () =>
+            dragonfly.get(`blacklist:access:${accessToken.value}`)
+        );
+
+        if (isBlacklisted) {
+            set.status = "Unauthorized";
+            throw error("Unauthorized", "Token has been revoked");
+        }
+
         const jwtPayload = await jwt.verify(accessToken.value);
         if (
             !jwtPayload ||
