@@ -91,7 +91,8 @@
                 "noReactSpecificProps": "off",
                 "noArrayIndexKey": "off",
                 "noConsole": "off",
-                "noConsoleLog": "off"
+                "noConsoleLog": "off",
+                "noEvolvingTypes": "off"
             }
         }
     },
