@@ -1,130 +1,77 @@
-import { env } from "@virtualqueue/environment";
+/**
+ * @lastModified 2025-02-04
+ * @see https://elysiajs.com/recipe/drizzle.html#utility
+ */
 
-export function validatePassword(password: string): boolean {
-    if (!password || password.length < 8) {
-        return false;
-    }
+import { Kind, type TObject } from "@sinclair/typebox";
+import type { Table } from "drizzle-orm";
+import { type BuildSchema, createInsertSchema, createSelectSchema } from "drizzle-typebox";
 
-    if (env.NODE_ENV === "development") {
-        return /[A-Za-z]/.test(password) && /[0-9]/.test(password);
-    }
+type Spread<T extends TObject | Table, Mode extends "select" | "insert" | undefined> = T extends TObject<infer Fields>
+    ? {
+          [K in keyof Fields]: Fields[K];
+      }
+    : T extends Table
+      ? Mode extends "select"
+          ? BuildSchema<"select", T["_"]["columns"], undefined>["properties"]
+          : Mode extends "insert"
+            ? BuildSchema<"insert", T["_"]["columns"], undefined>["properties"]
+            : { [k: string]: never }
+      : { [k: string]: never };
 
-    const hasUpperCase: boolean = /[A-Z]/.test(password);
-    const hasLowerCase: boolean = /[a-z]/.test(password);
-    const hasNumbers: boolean = /[0-9]/.test(password);
-    const hasSpecialChar: boolean = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+/**
+ * Spread a Drizzle schema into a plain object
+ */
+export const spread = <T extends TObject | Table, Mode extends "select" | "insert" | undefined>(
+    schema: T,
+    mode?: Mode
+): Spread<T, Mode> => {
+    const newSchema: Record<string, unknown> = {};
+    let table: TObject;
 
-    const hasNoCommonPatterns: boolean = !/(123456|password|qwerty|abc123)/i.test(password);
+    switch (mode) {
+        case "insert":
+        case "select": {
+            if (Kind in schema) {
+                table = schema;
+                break;
+            }
 
-    const hasNoSequences: boolean =
-        !/(abcdef|bcdefg|cdefgh|defghi|efghij|fghijk|ghijkl|hijklm|ijklmn|jklmno|klmnop|lmnopq|mnopqr|nopqrs|opqrst|pqrstu|qrstuv|rstuvw|stuvwx|tuvwxy|uvwxyz|12345|23456|34567|45678|56789)/i.test(
-            password
-        );
+            table = mode === "insert" ? createInsertSchema(schema) : createSelectSchema(schema);
 
-    // Check for repeating characters (like "aaa" or "111")
-    const hasNoRepeats: boolean = !/(.)\1{2,}/.test(password);
-
-    if (env.NODE_ENV === "test") {
-        return hasUpperCase && hasLowerCase && hasNumbers;
-    }
-
-    return (
-        hasUpperCase &&
-        hasLowerCase &&
-        hasNumbers &&
-        hasSpecialChar &&
-        hasNoCommonPatterns &&
-        hasNoSequences &&
-        hasNoRepeats
-    );
-}
-
-export function getPasswordValidationIssues(password: string): string[] {
-    const issues: string[] = [];
-
-    if (!password || password.length < 8) {
-        issues.push("Password must be at least 8 characters long");
-        return issues; // Return early if password is too short
-    }
-
-    if (env.NODE_ENV === "development") {
-        if (!/[A-Za-z]/.test(password)) {
-            issues.push("Password must contain at least one letter");
+            break;
         }
-        if (!/[0-9]/.test(password)) {
-            issues.push("Password must contain at least one number");
+
+        default: {
+            if (!(Kind in schema)) throw new Error("Expect a schema");
+            table = schema;
         }
-        return issues;
     }
 
-    if (!/[A-Z]/.test(password)) {
-        issues.push("Password must contain at least one uppercase letter");
-    }
+    for (const key of Object.keys(table.properties)) newSchema[key] = table.properties[key];
 
-    if (!/[a-z]/.test(password)) {
-        issues.push("Password must contain at least one lowercase letter");
-    }
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    return newSchema as any;
+};
 
-    if (!/[0-9]/.test(password)) {
-        issues.push("Password must contain at least one number");
-    }
+/**
+ * Spread a Drizzle Table into a plain object
+ *
+ * If `mode` is 'insert', the schema will be refined for insert
+ * If `mode` is 'select', the schema will be refined for select
+ * If `mode` is undefined, the schema will be spread as is, models will need to be refined manually
+ */
+export const spreads = <T extends Record<string, TObject | Table>, Mode extends "select" | "insert" | undefined>(
+    models: T,
+    mode?: Mode
+): {
+    [K in keyof T]: Spread<T[K], Mode>;
+} => {
+    const newSchema: Record<string, unknown> = {};
+    const keys = Object.keys(models);
 
-    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
-        issues.push("Password must contain at least one special character");
-    }
+    for (const key of keys) newSchema[key] = spread(models[key] as TObject | Table, mode);
 
-    if (/(123456|password|qwerty|abc123)/i.test(password)) {
-        issues.push("Password contains a common pattern that is easily guessable");
-    }
-
-    if (
-        /(abcdef|bcdefg|cdefgh|defghi|efghij|fghijk|ghijkl|hijklm|ijklmn|jklmno|klmnop|lmnopq|mnopqr|nopqrs|opqrst|pqrstu|qrstuv|rstuvw|stuvwx|tuvwxy|uvwxyz|12345|23456|34567|45678|56789)/i.test(
-            password
-        )
-    ) {
-        issues.push("Password contains a sequential pattern");
-    }
-
-    if (/(.)\1{2,}/.test(password)) {
-        issues.push("Password contains repeating characters");
-    }
-
-    return issues;
-}
-
-export function getPasswordStrength(password: string): number {
-    if (!password) return 0;
-
-    let score = 0;
-
-    // Length contribution (up to 25 points)
-    score += Math.min(25, password.length * 2);
-
-    // Character variety contribution (up to 50 points)
-    if (/[A-Z]/.test(password)) score += 10;
-    if (/[a-z]/.test(password)) score += 10;
-    if (/[0-9]/.test(password)) score += 10;
-    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) score += 20;
-
-    // Deductions for common patterns (up to -25 points)
-    if (/(123456|password|qwerty|abc123)/i.test(password)) score -= 25;
-    if (
-        /(abcdef|bcdefg|cdefgh|defghi|efghij|fghijk|ghijkl|hijklm|ijklmn|jklmno|klmnop|lmnopq|mnopqr|nopqrs|opqrst|pqrstu|qrstuv|rstuvw|stuvwx|tuvwxy|uvwxyz|12345|23456|34567|45678|56789)/i.test(
-            password
-        )
-    )
-        score -= 15;
-    if (/(.)\1{2,}/.test(password)) score -= 10;
-
-    // Entropy bonus for mixed character types (up to 25 points)
-    const hasUpper: boolean = /[A-Z]/.test(password);
-    const hasLower: boolean = /[a-z]/.test(password);
-    const hasDigit: boolean = /[0-9]/.test(password);
-    const hasSpecial: boolean = /[^A-Za-z0-9]/.test(password);
-
-    const varietyCount = [hasUpper, hasLower, hasDigit, hasSpecial].filter(Boolean).length;
-    score += varietyCount * 6.25; // Up to 25 points for all 4 types
-
-    // Ensure score stays within 0-100 range
-    return Math.max(0, Math.min(100, score));
-}
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    return newSchema as any;
+};

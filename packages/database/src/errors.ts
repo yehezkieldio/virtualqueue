@@ -1,43 +1,35 @@
 import pg from "postgres";
 
-export const isUniqueConstraintError = (error: unknown): boolean => {
+export function isUniqueConstraintError(error: unknown): boolean {
     return error instanceof pg.PostgresError && error.code === "23505";
-};
+}
 
-export const isForeignKeyConstraintError = (error: unknown): boolean => {
+export function isForeignKeyConstraintError(error: unknown): boolean {
     return error instanceof pg.PostgresError && error.code === "23503";
-};
+}
 
-export const isCheckConstraintError = (error: unknown): boolean => {
+export function isCheckConstraintError(error: unknown): boolean {
     return error instanceof pg.PostgresError && error.code === "23514";
-};
+}
 
-export const isNotNullConstraintError = (error: unknown): boolean => {
+export function isNotNullConstraintError(error: unknown): boolean {
     return error instanceof pg.PostgresError && error.code === "23502";
-};
+}
 
-export const isInvalidDateError = (error: unknown): boolean => {
+export function isInvalidDateError(error: unknown): boolean {
     return error instanceof pg.PostgresError && error.code === "22008";
-};
+}
 
-export const isEnumValueError = (error: unknown): boolean => {
+export function isEnumValueError(error: unknown): boolean {
     return error instanceof pg.PostgresError && error.code === "22P02";
-};
+}
 
-export const isDatabaseConnectionError = (error: unknown): boolean => {
-    return (
-        error instanceof pg.PostgresError &&
-        (error.code === "08006" || error.code === "08001" || error.code === "08004")
-    );
-};
-
-export const getErrorMessage = (error: unknown): string => {
+export function getErrorMessage(error: unknown): string {
     if (error instanceof pg.PostgresError) {
         switch (error.code) {
             case "23505": {
-                // Extract the constraint name to provide more specific error messages
-                const match = error.message.match(/unique constraint "(.+?)"/);
-                const constraint = match ? match[1] : "unknown";
+                const match: RegExpMatchArray | null = error.message.match(/unique constraint "(.+?)"/);
+                const constraint: string | undefined = match ? match[1] : "unknown";
 
                 if (!constraint) {
                     return "A record with this information already exists";
@@ -63,9 +55,8 @@ export const getErrorMessage = (error: unknown): string => {
             }
 
             case "23502": {
-                // Extract the column name from the error message
-                const columnMatch = error.message.match(/column "(.+?)"/);
-                const column = columnMatch ? columnMatch[1] : "unknown";
+                const columnMatch: RegExpMatchArray | null = error.message.match(/column "(.+?)"/);
+                const column: string | undefined = columnMatch ? columnMatch[1] : "unknown";
                 return `The ${column} field is required`;
             }
 
@@ -85,4 +76,16 @@ export const getErrorMessage = (error: unknown): string => {
     }
 
     return error instanceof Error ? error.message : "An unknown error occurred";
-};
+}
+
+export function isDatabaseError(error: unknown): boolean {
+    return (
+        error instanceof pg.PostgresError &&
+        (isUniqueConstraintError(error) ||
+            isForeignKeyConstraintError(error) ||
+            isCheckConstraintError(error) ||
+            isNotNullConstraintError(error) ||
+            isInvalidDateError(error) ||
+            isEnumValueError(error))
+    );
+}

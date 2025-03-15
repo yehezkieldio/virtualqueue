@@ -15,13 +15,13 @@
         "drizzle-kit": "^0.30.5"
     },
     "exports": {
-        ".": "./src/drizzle.ts",
-        "./schema": "./src/schema.ts",
+        ".": "./src/index.ts",
+        "./cuid": "./src/cuid.ts",
+        "./drizzle": "./src/drizzle.ts",
         "./errors": "./src/errors.ts",
-        "./utils": "./src/utils.ts"
-    },
-    "override": {
-        "@sinclair/typebox": "0.32.27"
+        "./schema": "./src/schema.ts",
+        "./utils": "./src/utils.ts",
+        "./validation": "./src/validation.ts"
     },
     "scripts": {
         "db:push": "bun --env-file ../../.env drizzle-kit push",
