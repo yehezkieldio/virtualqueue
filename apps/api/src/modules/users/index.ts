@@ -1,32 +1,27 @@
-import { type SQLWrapper, and, asc, db, desc, eq, ilike, isNull, sql } from "@virtualqueue/database";
-import {
-    getErrorMessage,
-    isEnumValueError,
-    isNotNullConstraintError,
-    isUniqueConstraintError,
-} from "@virtualqueue/database/errors";
-import {
-    type RolesType,
-    _createUser,
-    _selectUser,
-    _updateUser,
-    createCuid,
-    users,
-} from "@virtualqueue/database/schema";
-import { getPasswordValidationIssues, validatePassword } from "@virtualqueue/database/utils";
+import { db } from "@virtualqueue/database";
+import { type SQLWrapper, and, asc, desc, eq, ilike, isNull, sql } from "@virtualqueue/database/drizzle";
+import { type RolesType, table, users } from "@virtualqueue/database/schema";
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-typebox";
 import Elysia, { t } from "elysia";
-import { logger } from "#utils/logger";
-import { PaginationMetaSchema, createPaginatedResponseSchema } from "#utils/response";
+import { PaginationQuerySchema, createPaginatedSchema } from "#utils/response";
 
+const _selectUser = createSelectSchema(table.users);
+const selectUserSchema = t.Omit(_selectUser, ["password", "deletedAt"]);
+
+const _createUser = createInsertSchema(table.users, {
+    email: t.String({ format: "email" }),
+});
 const createUserSchema = t.Omit(_createUser, ["id", "createdAt", "updatedAt", "deletedAt"]);
-const userResponseSchema = t.Omit(_selectUser, ["password", "deletedAt"]);
+
+const _updateUser = createUpdateSchema(table.users);
+const updateUserSchema = t.Omit(_updateUser, ["id", "createdAt", "updatedAt", "deletedAt"]);
 
 export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).group("/users", (api) =>
     api
         .model({
-            "user.many": t.Array(userResponseSchema),
-            "user.one": userResponseSchema,
-            "user.paginated": createPaginatedResponseSchema(userResponseSchema),
+            "user.many": t.Array(selectUserSchema),
+            "user.one": selectUserSchema,
+            "user.paginated": createPaginatedSchema(selectUserSchema),
         })
         /* -------------------------------------------------------------------------- */
         .get(
@@ -42,10 +37,10 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 const offset = (page - 1) * limit;
                 const conditions: SQLWrapper[] = [];
 
-                conditions.push(isNull(users.deletedAt));
+                conditions.push(isNull(table.users.deletedAt));
 
                 if (search) {
-                    conditions.push(ilike(users.fullname, `%${search}%`));
+                    conditions.push(ilike(table.users.fullname, `%${search}%`));
                 }
 
                 if (role && ["USER", "ADMIN", "SUPERADMIN"].includes(role)) {
@@ -92,7 +87,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 };
             },
             {
-                query: PaginationMetaSchema,
+                query: PaginationQuerySchema,
                 response: "user.paginated",
                 detail: {
                     description: "View all users.",
@@ -104,7 +99,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
             "/:id",
             async (ctx) => {
                 const user = await db.query.users.findFirst({
-                    where: eq(users.id, ctx.params.id),
+                    where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
                     columns: {
                         password: false,
                         deletedAt: false,
@@ -131,409 +126,6 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 },
                 detail: {
                     description: "View user by ID.",
-                },
-            }
-        )
-        /* -------------------------------------------------------------------------- */
-        .post(
-            "/",
-            async (ctx) => {
-                logger.info("Creating user", ctx.body);
-
-                try {
-                    await db.insert(users).values({
-                        id: createCuid(),
-                        ...ctx.body,
-                        password: await Bun.password.hash(ctx.body.password),
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        deletedAt: null,
-                    });
-                } catch (error) {
-                    if (isUniqueConstraintError(error)) {
-                        throw ctx.error("Conflict", getErrorMessage(error));
-                    }
-
-                    if (isNotNullConstraintError(error)) {
-                        throw ctx.error("Bad Request", getErrorMessage(error));
-                    }
-
-                    if (isEnumValueError(error)) {
-                        throw ctx.error("Bad Request", "Invalid role value provided");
-                    }
-
-                    logger.error("Error creating user", error);
-
-                    ctx.set.status = 500;
-                    throw ctx.error("Internal Server Error", "An error occurred while creating the user.");
-                }
-
-                ctx.set.status = "Created";
-
-                return "User created successfully.";
-            },
-            {
-                body: createUserSchema,
-
-                response: {
-                    201: t.String({
-                        default: "User created successfully.",
-                    }),
-                    400: t.String({
-                        default: "Invalid data provided.",
-                    }),
-                    409: t.String({
-                        default: "Email address is already in use.",
-                    }),
-                    500: t.String({
-                        default: "An error occurred while creating the user.",
-                    }),
-                },
-                detail: {
-                    description: "Create a new user.",
-                },
-            }
-        )
-        /* -------------------------------------------------------------------------- */
-        .put(
-            "/:id",
-            async (ctx) => {
-                const existingUser = await db.query.users.findFirst({
-                    where: eq(users.id, ctx.params.id),
-                });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                try {
-                    await db
-                        .update(users)
-                        .set({
-                            ...ctx.body,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, ctx.params.id));
-                } catch (error) {
-                    if (isUniqueConstraintError(error)) {
-                        throw ctx.error("Conflict", getErrorMessage(error));
-                    }
-
-                    if (isNotNullConstraintError(error)) {
-                        throw ctx.error("Bad Request", getErrorMessage(error));
-                    }
-
-                    if (isEnumValueError(error)) {
-                        throw ctx.error("Bad Request", "Invalid role value provided");
-                    }
-
-                    logger.error("Error updating user", error);
-                    throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
-                }
-
-                ctx.set.status = 204;
-                return "User updated successfully.";
-            },
-            {
-                params: t.Object({
-                    id: t.String({
-                        description: "The ID of the user to update.",
-                    }),
-                }),
-                body: t.Omit(_updateUser, ["id", "password", "createdAt", "updatedAt", "deletedAt"]),
-                response: {
-                    204: t.String({
-                        default: "User updated successfully.",
-                    }),
-                    400: t.String({
-                        default: "Invalid data provided.",
-                    }),
-                    404: t.String({
-                        default: "User not found.",
-                    }),
-                    409: t.String({
-                        default: "Email address is already in use.",
-                    }),
-                    500: t.String({
-                        default: "An error occurred while updating the user.",
-                    }),
-                },
-                detail: {
-                    description: "Replace all user data.",
-                },
-            }
-        )
-        /* -------------------------------------------------------------------------- */
-        .put(
-            "/:id/password",
-            async (ctx) => {
-                const existingUser = await db.query.users.findFirst({
-                    where: eq(users.id, ctx.params.id),
-                });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                if (ctx.body.oldPassword === ctx.body.password) {
-                    throw ctx.error("Bad Request", "New password must be different from the old password.");
-                }
-
-                if (!validatePassword(ctx.body.password)) {
-                    throw ctx.error("Bad Request", getPasswordValidationIssues(ctx.body.password).join(", "));
-                }
-
-                try {
-                    await db
-                        .update(users)
-                        .set({
-                            password: await Bun.password.hash(ctx.body.password),
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, ctx.params.id));
-                } catch (error) {
-                    logger.error("Error updating user password", error);
-                    throw ctx.error("Internal Server Error", "An error occurred while updating the user password.");
-                }
-
-                ctx.set.status = 204;
-                return "User password updated successfully.";
-            },
-            {
-                params: t.Object({
-                    id: t.String({
-                        description: "The ID of the user to update.",
-                    }),
-                }),
-                body: t.Object({
-                    oldPassword: t.String({
-                        description: "The old password of the user.",
-                    }),
-                    password: t.String({
-                        description: "The new password for the user.",
-                    }),
-                }),
-                response: {
-                    204: t.String({
-                        default: "User password updated successfully.",
-                    }),
-                    400: t.String({
-                        default: "Invalid data provided.",
-                    }),
-                    404: t.String({
-                        default: "User not found.",
-                    }),
-                    500: t.String({
-                        default: "An error occurred while updating the user password.",
-                    }),
-                },
-                detail: {
-                    description: "Update user password.",
-                },
-            }
-        )
-        /* -------------------------------------------------------------------------- */
-        .patch(
-            "/:id",
-            async (ctx) => {
-                const existingUser = await db.query.users.findFirst({
-                    where: eq(users.id, ctx.params.id),
-                });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                try {
-                    const updateData: Partial<typeof ctx.body> = { ...ctx.body };
-
-                    await db
-                        .update(users)
-                        .set({
-                            ...updateData,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, ctx.params.id));
-                } catch (error) {
-                    if (isUniqueConstraintError(error)) {
-                        throw ctx.error("Conflict", getErrorMessage(error));
-                    }
-
-                    if (isNotNullConstraintError(error)) {
-                        throw ctx.error("Bad Request", getErrorMessage(error));
-                    }
-
-                    if (isEnumValueError(error)) {
-                        throw ctx.error("Bad Request", "Invalid role value provided");
-                    }
-
-                    logger.error("Error updating user", error);
-                    throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
-                }
-
-                ctx.set.status = 204;
-                return "User updated successfully.";
-            },
-            {
-                params: t.Object({
-                    id: t.String({
-                        description: "The ID of the user to partially update.",
-                    }),
-                }),
-                body: t.Partial(t.Omit(_updateUser, ["id", "createdAt", "updatedAt", "deletedAt"])),
-                response: {
-                    204: t.String({
-                        default: "User updated successfully.",
-                    }),
-                    400: t.String({
-                        default: "Invalid data provided.",
-                    }),
-                    404: t.String({
-                        default: "User not found.",
-                    }),
-                    409: t.String({
-                        default: "Email address is already in use.",
-                    }),
-                    500: t.String({
-                        default: "An error occurred while updating the user.",
-                    }),
-                },
-                detail: {
-                    description: "Update specific user fields.",
-                },
-            }
-        )
-        /* -------------------------------------------------------------------------- */
-        .delete(
-            "/:id",
-            async (ctx) => {
-                const permanentDelete: boolean = ctx.query.permanent === "true";
-                const userId: string = ctx.params.id;
-
-                const existingUser = await db.query.users.findFirst({
-                    where: eq(users.id, userId),
-                });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                try {
-                    if (permanentDelete) {
-                        await db.delete(users).where(eq(users.id, userId));
-                        logger.info(`User ${userId} permanently deleted`);
-
-                        ctx.set.status = 200;
-                        return "User permanently deleted.";
-                    }
-
-                    await db
-                        .update(users)
-                        .set({
-                            deletedAt: new Date(),
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, userId));
-                    logger.info(`User ${userId} soft deleted`);
-
-                    ctx.set.status = 200;
-                    return "User deleted.";
-                } catch (error) {
-                    logger.error("Error deleting user", error);
-                    throw ctx.error("Internal Server Error", "An error occurred while deleting the user.");
-                }
-            },
-            {
-                params: t.Object({
-                    id: t.String({
-                        description: "The ID of the user to delete.",
-                    }),
-                }),
-                query: t.Object({
-                    permanent: t.Optional(
-                        t.String({
-                            description: "Whether to permanently delete the user.",
-                            enum: ["true", "false"],
-                            default: "false",
-                        })
-                    ),
-                }),
-                response: {
-                    200: t.String({
-                        description: "Success message",
-                        default: "User deleted.",
-                    }),
-                    404: t.String({
-                        default: "User not found.",
-                    }),
-                    500: t.String({
-                        default: "An error occurred while deleting the user.",
-                    }),
-                },
-                detail: {
-                    description: "Delete a user (soft delete by default, permanent if ?permanent=true).",
-                },
-            }
-        )
-        /* -------------------------------------------------------------------------- */
-        .post(
-            "/:id/restore",
-            async (ctx) => {
-                const userId: string = ctx.params.id;
-
-                const existingUser = await db.query.users.findFirst({
-                    where: eq(users.id, userId),
-                });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                if (!existingUser.deletedAt) {
-                    throw ctx.error("Bad Request", "User is not deleted.");
-                }
-
-                try {
-                    await db
-                        .update(users)
-                        .set({
-                            deletedAt: null,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, userId));
-
-                    logger.info(`User ${userId} restored`);
-
-                    ctx.set.status = 200;
-                    return "User restored successfully.";
-                } catch (error) {
-                    logger.error("Error restoring user", error);
-                    throw ctx.error("Internal Server Error", "An error occurred while restoring the user.");
-                }
-            },
-            {
-                params: t.Object({
-                    id: t.String({
-                        description: "The ID of the user to restore.",
-                    }),
-                }),
-                response: {
-                    200: t.String({
-                        description: "Success message",
-                        default: "User restored successfully.",
-                    }),
-                    400: t.String({
-                        default: "User is not deleted.",
-                    }),
-                    404: t.String({
-                        default: "User not found.",
-                    }),
-                    500: t.String({
-                        default: "An error occurred while restoring the user.",
-                    }),
-                },
-                detail: {
-                    description: "Restore a soft-deleted user.",
                 },
             }
         )
