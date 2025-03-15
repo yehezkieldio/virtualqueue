@@ -306,4 +306,10 @@ export const table = {
     webhooks,
 } as const;
 
+export const materializedViews = {
+    popularEvents,
+    queueAnalytics,
+} as const;
+
 export type Table = typeof table;
+export type MaterializedView = typeof materializedViews;
