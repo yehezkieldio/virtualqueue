@@ -1,3 +1,4 @@
+import { record } from "@elysiajs/opentelemetry";
 import { db } from "@virtualqueue/database";
 import { cuid } from "@virtualqueue/database/cuid";
 import { type SQLWrapper, and, asc, desc, eq, ilike, isNull, sql } from "@virtualqueue/database/drizzle";
@@ -35,64 +36,68 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .get(
             "/",
             async ({ query }) => {
-                const page = Math.max(1, Number(query.page) || 1);
-                const limit = Math.max(1, Number(query.limit) || 10);
-                const search = query.search as string | undefined;
-                const role = query.role as string | undefined;
-                const sortBy = (query.sortBy as string) || "createdAt";
-                const sortOrder = query.sortOrder === "asc" ? asc : desc;
+                return await record("users.query.find.all", async () => {
+                    const page = Math.max(1, Number(query.page) || 1);
+                    const limit = Math.max(1, Number(query.limit) || 10);
+                    const search = query.search as string | undefined;
+                    const role = query.role as string | undefined;
+                    const sortBy = (query.sortBy as string) || "createdAt";
+                    const sortOrder = query.sortOrder === "asc" ? asc : desc;
 
-                const offset = (page - 1) * limit;
-                const conditions: SQLWrapper[] = [];
+                    const offset = (page - 1) * limit;
+                    const conditions: SQLWrapper[] = [];
 
-                conditions.push(isNull(table.users.deletedAt));
+                    conditions.push(isNull(table.users.deletedAt));
 
-                if (search) {
-                    conditions.push(ilike(table.users.fullname, `%${search}%`));
-                }
+                    if (search) {
+                        conditions.push(ilike(table.users.fullname, `%${search}%`));
+                    }
 
-                if (role && ["USER", "ADMIN", "SUPERADMIN"].includes(role)) {
-                    conditions.push(eq(users.role, role as RolesType));
-                }
+                    if (role && ["USER", "ADMIN", "SUPERADMIN"].includes(role)) {
+                        conditions.push(eq(users.role, role as RolesType));
+                    }
 
-                const totalItemsResult = await db
-                    .select({
-                        count: sql<number>`cast(count(*) as int)`,
-                    })
-                    .from(users)
-                    .where(and(...conditions));
+                    const totalItemsResult = await record("database.query.users.count", async () => {
+                        return await db
+                            .select({
+                                count: sql<number>`cast(count(*) as int)`,
+                            })
+                            .from(users)
+                            .where(and(...conditions));
+                    });
 
-                const totalItems: number = totalItemsResult[0]?.count || 0;
+                    const totalItems: number = totalItemsResult[0]?.count || 0;
 
-                const usersList = await db.query.users.findMany({
-                    columns: {
-                        password: false,
-                        deletedAt: false,
-                    },
-                    where: and(...conditions),
-                    limit: limit,
-                    offset: offset,
-                    orderBy:
-                        sortBy === "fullname"
-                            ? sortOrder(users.fullname)
-                            : sortBy === "email"
-                              ? sortOrder(users.email)
-                              : sortOrder(users.createdAt),
+                    const usersList = await record("database.query.users.find.many", async () => {
+                        return await db
+                            .select()
+                            .from(users)
+                            .where(and(...conditions))
+                            .limit(limit)
+                            .offset(offset)
+                            .orderBy(
+                                sortBy === "fullname"
+                                    ? sortOrder(users.fullname)
+                                    : sortBy === "email"
+                                      ? sortOrder(users.email)
+                                      : sortOrder(users.createdAt)
+                            );
+                    });
+
+                    const totalPages: number = Math.ceil(totalItems / limit);
+
+                    return {
+                        data: usersList,
+                        meta: {
+                            page,
+                            limit,
+                            totalItems,
+                            totalPages,
+                            hasNext: page < totalPages,
+                            hasPrev: page > 1,
+                        },
+                    };
                 });
-
-                const totalPages: number = Math.ceil(totalItems / limit);
-
-                return {
-                    data: usersList,
-                    meta: {
-                        page,
-                        limit,
-                        totalItems,
-                        totalPages,
-                        hasNext: page < totalPages,
-                        hasPrev: page > 1,
-                    },
-                };
             },
             {
                 query: PaginationQuerySchema,
@@ -106,19 +111,23 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .get(
             "/:id",
             async (ctx) => {
-                const user = await db.query.users.findFirst({
-                    where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
-                    columns: {
-                        password: false,
-                        deletedAt: false,
-                    },
+                return await record("users.query.find.one", async () => {
+                    const user = await record("database.query.users.findFirst", async () => {
+                        return await db.query.users.findFirst({
+                            where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
+                            columns: {
+                                password: false,
+                                deletedAt: false,
+                            },
+                        });
+                    });
+
+                    if (!user) {
+                        throw ctx.error("Not Found", "User not found.");
+                    }
+
+                    return user;
                 });
-
-                if (!user) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                return user;
             },
             {
                 params: t.Object({
