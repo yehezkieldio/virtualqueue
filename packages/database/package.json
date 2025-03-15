@@ -1,18 +1,9 @@
 {
     "name": "@virtualqueue/database",
     "version": "0.0.0",
-    "scripts": {
-        "db:push": "bun --env-file ../../.env drizzle-kit push",
-        "db:studio": "bun --env-file ../../.env drizzle-kit studio",
-        "db:generate": "bun --env-file ../../.env drizzle-kit generate",
-        "db:drop": "bun --env-file ../../.env drizzle-kit drop",
-        "db:migrate": "bun --env-file ../../.env drizzle-kit migrate",
-        "db:seed": "bun --env-file ../../.env ./src/seed.ts",
-        "db:reset": "bun --env-file ../../.env ./src/reset.ts",
-        "typecheck": "tsc --noEmit"
-    },
     "dependencies": {
         "@paralleldrive/cuid2": "^2.2.2",
+        "@sinclair/typebox": "^0.34.30",
         "@virtualqueue/environment": "workspace:*",
         "drizzle-orm": "^0.40.0",
         "drizzle-seed": "^0.3.1",
@@ -23,16 +14,23 @@
         "@virtualqueue/typescript": "workspace:*",
         "drizzle-kit": "^0.30.5"
     },
-    "override": {
-        "@sinclair/typebox": "0.32.27"
-    },
     "exports": {
         ".": "./src/drizzle.ts",
         "./schema": "./src/schema.ts",
         "./errors": "./src/errors.ts",
         "./utils": "./src/utils.ts"
     },
-    "peerDependencies": {
-        "elysia": "^1.2.25"
+    "override": {
+        "@sinclair/typebox": "0.32.27"
+    },
+    "scripts": {
+        "db:push": "bun --env-file ../../.env drizzle-kit push",
+        "db:studio": "bun --env-file ../../.env drizzle-kit studio",
+        "db:generate": "bun --env-file ../../.env drizzle-kit generate",
+        "db:drop": "bun --env-file ../../.env drizzle-kit drop",
+        "db:migrate": "bun --env-file ../../.env drizzle-kit migrate",
+        "db:seed": "bun --env-file ../../.env ./src/seed.ts",
+        "db:reset": "bun --env-file ../../.env ./src/reset.ts",
+        "typecheck": "tsc --noEmit"
     }
 }

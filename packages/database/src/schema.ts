@@ -1,4 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
+import { Type } from "@sinclair/typebox";
 import { type InferSelectModel, type SQL, and, isNull, sql } from "drizzle-orm";
 import {
     boolean,
@@ -15,9 +16,8 @@ import {
     varchar,
 } from "drizzle-orm/pg-core";
 import { createSchemaFactory } from "drizzle-typebox";
-import { t } from "elysia";
 
-const { createInsertSchema, createSelectSchema, createUpdateSchema } = createSchemaFactory({ typeboxInstance: t });
+const { createInsertSchema, createSelectSchema, createUpdateSchema } = createSchemaFactory({ typeboxInstance: Type });
 
 export const notDeleted = <T extends { deletedAt: unknown }>(table: T) => isNull(table.deletedAt as unknown as SQL);
 

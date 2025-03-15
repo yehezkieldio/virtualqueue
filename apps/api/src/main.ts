@@ -1,4 +1,7 @@
+import { opentelemetry } from "@elysiajs/opentelemetry";
 import swagger from "@elysiajs/swagger";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
 import { env } from "@virtualqueue/environment";
 import { Elysia, t } from "elysia";
 import type { Server } from "elysia/universal";
@@ -54,6 +57,11 @@ const swaggerConfig = {
 };
 
 export const api = new Elysia()
+    .use(
+        opentelemetry({
+            spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+        })
+    )
     .use(useLoggerMiddleware())
     .use(useResponseMapperMiddleware())
     .use(swagger(swaggerConfig))

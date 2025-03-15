@@ -36,5 +36,8 @@
         "turbo": "^2.4.4",
         "typescript": "^5.8.2"
     },
-    "packageManager": "bun@1.2.6"
+    "packageManager": "bun@1.2.6",
+    "dependencies": {
+        "@elysiajs/opentelemetry": "^1.2.0"
+    }
 }
