@@ -146,14 +146,31 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 }
 
                 try {
-                    await db.insert(users).values({
-                        id: cuid(),
-                        ...ctx.body,
-                        password: await Bun.password.hash(ctx.body.password),
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        deletedAt: null,
-                    });
+                    const newUser = await db
+                        .insert(users)
+                        .values({
+                            id: cuid(),
+                            ...ctx.body,
+                            password: await Bun.password.hash(ctx.body.password),
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                            deletedAt: null,
+                        })
+                        .returning({
+                            id: users.id,
+                            email: users.email,
+                            fullname: users.fullname,
+                            role: users.role,
+                            photo: users.photo,
+                            phoneNumber: users.phoneNumber,
+                            lastLogin: users.lastLogin,
+                            preferences: users.preferences,
+                            createdAt: users.createdAt,
+                            updatedAt: users.updatedAt,
+                        });
+
+                    ctx.set.status = "Created";
+                    return newUser[0];
                 } catch (error) {
                     if (isUniqueConstraintError(error)) {
                         throw ctx.error("Conflict", getErrorMessage(error));
@@ -170,17 +187,11 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                     ctx.set.status = 500;
                     throw ctx.error("Internal Server Error", "An error occurred while creating the user.");
                 }
-
-                ctx.set.status = "Created";
-
-                return "User created successfully.";
             },
             {
                 body: createUserSchema,
                 response: {
-                    201: t.String({
-                        default: "User created successfully.",
-                    }),
+                    201: "user.one",
                     400: t.String({
                         default: "Invalid data provided.",
                     }),
@@ -209,13 +220,32 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 }
 
                 try {
-                    await db
+                    const updatedUser = await db
                         .update(users)
                         .set({
                             ...ctx.body,
                             updatedAt: new Date(),
                         })
-                        .where(eq(users.id, ctx.params.id));
+                        .where(eq(users.id, ctx.params.id))
+                        .returning({
+                            id: users.id,
+                            email: users.email,
+                            fullname: users.fullname,
+                            role: users.role,
+                            photo: users.photo,
+                            phoneNumber: users.phoneNumber,
+                            lastLogin: users.lastLogin,
+                            preferences: users.preferences,
+                            createdAt: users.createdAt,
+                            updatedAt: users.updatedAt,
+                        });
+
+                    if (!updatedUser[0]) {
+                        throw ctx.error("Internal Server Error", "Failed to update user");
+                    }
+
+                    ctx.set.status = 200;
+                    return updatedUser[0];
                 } catch (error) {
                     if (isUniqueConstraintError(error)) {
                         throw ctx.error("Conflict", getErrorMessage(error));
@@ -231,9 +261,6 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
 
                     throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
                 }
-
-                ctx.set.status = 204;
-                return "User updated successfully.";
             },
             {
                 params: t.Object({
@@ -241,11 +268,9 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                         description: "The ID of the user to update.",
                     }),
                 }),
-                body: t.Omit(_updateUser, ["id", "password", "createdAt", "updatedAt", "deletedAt"]),
+                body: updateUserSchema,
                 response: {
-                    204: t.String({
-                        default: "User updated successfully.",
-                    }),
+                    200: "user.one",
                     400: t.String({
                         default: "Invalid data provided.",
                     }),
@@ -297,7 +322,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                     throw ctx.error("Internal Server Error", "An error occurred while updating the user password.");
                 }
 
-                ctx.set.status = 204;
+                ctx.set.status = 200;
                 return "User password updated successfully.";
             },
             {
@@ -315,7 +340,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                     }),
                 }),
                 response: {
-                    204: t.String({
+                    200: t.String({
                         default: "User password updated successfully.",
                     }),
                     400: t.String({
@@ -348,13 +373,32 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 try {
                     const updateData: Partial<typeof ctx.body> = { ...ctx.body };
 
-                    await db
+                    const updatedUser = await db
                         .update(users)
                         .set({
                             ...updateData,
                             updatedAt: new Date(),
                         })
-                        .where(eq(users.id, ctx.params.id));
+                        .where(eq(users.id, ctx.params.id))
+                        .returning({
+                            id: users.id,
+                            email: users.email,
+                            fullname: users.fullname,
+                            role: users.role,
+                            photo: users.photo,
+                            phoneNumber: users.phoneNumber,
+                            lastLogin: users.lastLogin,
+                            preferences: users.preferences,
+                            createdAt: users.createdAt,
+                            updatedAt: users.updatedAt,
+                        });
+
+                    if (!updatedUser[0]) {
+                        throw ctx.error("Internal Server Error", "Failed to update user");
+                    }
+
+                    ctx.set.status = 200;
+                    return updatedUser[0];
                 } catch (error) {
                     if (isUniqueConstraintError(error)) {
                         throw ctx.error("Conflict", getErrorMessage(error));
@@ -370,9 +414,6 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
 
                     throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
                 }
-
-                ctx.set.status = 204;
-                return "User updated successfully.";
             },
             {
                 params: t.Object({
@@ -380,11 +421,9 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                         description: "The ID of the user to partially update.",
                     }),
                 }),
-                body: t.Partial(t.Omit(_updateUser, ["id", "createdAt", "updatedAt", "deletedAt"])),
+                body: t.Partial(updateUserSchema),
                 response: {
-                    204: t.String({
-                        default: "User updated successfully.",
-                    }),
+                    200: "user.one",
                     400: t.String({
                         default: "Invalid data provided.",
                     }),
@@ -498,7 +537,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                             updatedAt: new Date(),
                         })
                         .where(eq(users.id, userId));
-                } catch (error) {
+                } catch (_error) {
                     throw ctx.error("Internal Server Error", "An error occurred while restoring the user.");
                 }
 
