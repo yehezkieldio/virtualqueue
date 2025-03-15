@@ -1,15 +1,7 @@
-# tiresias
+## Links
 
-To install dependencies:
+API: http://localhost:3001
+Grafana: http://localhost:3000
+Jaeger: http://localhost:16686
+Prometheus: http://localhost:9090
 
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.6. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

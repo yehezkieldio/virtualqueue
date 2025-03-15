@@ -1,8 +1,4 @@
-import { opentelemetry } from "@elysiajs/opentelemetry";
 import swagger from "@elysiajs/swagger";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
-import { Resource } from "@opentelemetry/resources";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
 import { env } from "@virtualqueue/environment";
 import { Elysia, t } from "elysia";
 import type { Server } from "elysia/universal";
@@ -10,8 +6,10 @@ import { logger } from "#utils/logger";
 import { useLoggerMiddleware } from "./middlewares/logger";
 import { useResponseMapperMiddleware } from "./middlewares/response-mapper";
 import { usersModule } from "./modules/users";
+import { requestDurationHistogram, startResourceMetricsCollection, useMetricsMiddleware, useOpenTelemetryMiddleware } from "./utils/telemetry";
 
 logger.info("Starting API server...");
+startResourceMetricsCollection();
 
 const healthModule = new Elysia().get(
     "/health",
@@ -58,19 +56,20 @@ const swaggerConfig = {
 };
 
 export const api = new Elysia()
-    .use(
-        opentelemetry({
-            serviceName: "virtualqueue-api",
-            spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
-            resource: new Resource({
-                "service.name": "virtualqueue-api",
-                "service.version": "0.0.0",
-                "deployment.environment": env.NODE_ENV,
-            }),
-        })
-    )
+    .use(useOpenTelemetryMiddleware())
     .use(useLoggerMiddleware())
     .use(useResponseMapperMiddleware())
+    .use(useMetricsMiddleware())
+    .onAfterHandle(({ request, set, startTime }) => {
+        if (startTime) {
+            const duration = (Date.now() - startTime) / 1000;
+            requestDurationHistogram.record(duration, {
+                method: request.method,
+                path: new URL(request.url).pathname,
+                status_code: set.status?.toString() || "200",
+            });
+        }
+    })
     .use(swagger(swaggerConfig))
     .use(healthModule)
     .use(usersModule);

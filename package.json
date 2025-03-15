@@ -26,7 +26,9 @@
         "compose:obs:logs": "docker compose -f ./docker/docker-compose.yml --profile observability logs",
         "compose:all:up": "docker compose -f ./docker/docker-compose.yml --profile development --profile observability up -d ",
         "compose:all:down": "docker compose -f ./docker/docker-compose.yml --profile development --profile observability down",
-        "compose:all:logs": "docker compose -f ./docker/docker-compose.yml --profile development --profile observability logs"
+        "compose:all:logs": "docker compose -f ./docker/docker-compose.yml --profile development --profile observability logs",
+        "compose:all:restart": "docker compose -f ./docker/docker-compose.yml --profile development --profile observability restart",
+        "compose": "docker compose -f ./docker/docker-compose.yml"
     },
     "workspaces": ["apps/*", "packages/*"],
     "devDependencies": {

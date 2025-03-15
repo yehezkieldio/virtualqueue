@@ -34,6 +34,8 @@ services:
       - "9090:9090"
     networks:
       - virtualqueue-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
     container_name: virtualqueue-postgres-exporter
@@ -52,6 +54,9 @@ services:
     profiles: [observability]
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
