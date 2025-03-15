@@ -29,7 +29,8 @@
     "exports": {
         ".": "./src/drizzle.ts",
         "./schema": "./src/schema.ts",
-        "./errors": "./src/errors.ts"
+        "./errors": "./src/errors.ts",
+        "./utils": "./src/utils.ts"
     },
     "peerDependencies": {
         "elysia": "^1.2.25"

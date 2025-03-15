@@ -17,7 +17,7 @@ import {
 import { createSchemaFactory } from "drizzle-typebox";
 import { t } from "elysia";
 
-const { createInsertSchema, createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
+const { createInsertSchema, createSelectSchema, createUpdateSchema } = createSchemaFactory({ typeboxInstance: t });
 
 export const notDeleted = <T extends { deletedAt: unknown }>(table: T) => isNull(table.deletedAt as unknown as SQL);
 
@@ -66,6 +66,7 @@ export type SelectUser = InferSelectModel<typeof users>;
 
 export const _selectUser = createSelectSchema(users);
 export const _createUser = createInsertSchema(users);
+export const _updateUser = createUpdateSchema(users);
 
 export const events = pgTable(
     "event",
