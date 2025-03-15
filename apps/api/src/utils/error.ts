@@ -83,7 +83,6 @@ const ERROR_STATUS_MAP: Record<HttpErrorStatusString, number> = {
     NETWORK_AUTHENTICATION_REQUIRED: 511,
 } as const;
 
-// a function that takes in the number of the status code and returns the value name of the status code
 export function getStatusName(status: number): HttpErrorStatusString {
     return Object.keys(ERROR_STATUS_MAP).find(
         (key) => ERROR_STATUS_MAP[key as HttpErrorStatusString] === status

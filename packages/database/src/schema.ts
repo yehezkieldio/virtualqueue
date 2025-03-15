@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { type InferSelectModel, type SQL, and, isNull, relations, sql } from "drizzle-orm";
+import { type InferSelectModel, type SQL, and, isNull, sql } from "drizzle-orm";
 import {
     boolean,
     check,
@@ -14,7 +14,10 @@ import {
     uuid,
     varchar,
 } from "drizzle-orm/pg-core";
-import { createSelectSchema } from "drizzle-typebox";
+import { createSchemaFactory } from "drizzle-typebox";
+import { t } from "elysia";
+
+const { createInsertSchema, createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 
 export const notDeleted = <T extends { deletedAt: unknown }>(table: T) => isNull(table.deletedAt as unknown as SQL);
 
@@ -27,11 +30,15 @@ export type RolesType = (typeof roles.enumValues)[number];
 export const ticketStatus = pgEnum("ticket_status", ["ACTIVE", "USED", "EXPIRED", "CANCELLED"]);
 export const queuePriority = pgEnum("queue_priority", ["VIP", "REGULAR", "PRIORITY"]);
 
+export function createCuid() {
+    return createId();
+}
+
 export const users = pgTable(
     "user",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         email: varchar("email", { length: 255 }).notNull().unique(),
         password: varchar("password", { length: 255 }).notNull(),
@@ -58,12 +65,13 @@ export const users = pgTable(
 export type SelectUser = InferSelectModel<typeof users>;
 
 export const _selectUser = createSelectSchema(users);
+export const _createUser = createInsertSchema(users);
 
 export const events = pgTable(
     "event",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         name: varchar("name", { length: 255 }).notNull(),
         description: varchar("description", { length: 1000 }),
@@ -95,7 +103,7 @@ export const tickets = pgTable(
     "ticket",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         uniqueCode: uuid("unique_code").defaultRandom().notNull().unique(),
         eventId: varchar("event_id", { length: 24 })
@@ -127,7 +135,7 @@ export const queues = pgTable(
     "queue",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         eventId: varchar("event_id", { length: 24 })
             .notNull()
@@ -155,7 +163,7 @@ export const queueItems = pgTable(
     "queue_item",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         queueId: varchar("queue_id", { length: 24 })
             .notNull()
@@ -189,7 +197,7 @@ export const queueLogs = pgTable(
     "queue_log",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         queueId: varchar("queue_id", { length: 24 })
             .notNull()
@@ -213,7 +221,7 @@ export const webhooks = pgTable(
     "webhook",
     {
         id: varchar("id", { length: 24 })
-            .$defaultFn(() => createId())
+            .$defaultFn(() => createCuid())
             .primaryKey(),
         eventId: varchar("event_id", { length: 24 })
             .notNull()
@@ -255,18 +263,3 @@ export const popularEvents = pgMaterializedView("popular_events").as((qb) =>
         .groupBy(tickets.eventId)
         .orderBy(sql`${sql<number>`cast(count(*) as int)`.as("ticket_count")} desc`)
 );
-
-export const usersRelations = relations(users, ({ many }) => ({
-    events: many(events, { relationName: "creator" }),
-    tickets: many(tickets),
-    queueItems: many(queueItems),
-}));
-
-export const eventsRelations = relations(events, ({ one, many }) => ({
-    creator: one(users, {
-        fields: [events.creatorId],
-        references: [users.id],
-    }),
-    tickets: many(tickets),
-    queues: many(queues),
-}));

@@ -41,6 +41,9 @@
         "@virtualqueue/typescript": "workspace:*",
         "drizzle-kit": "^0.30.5",
       },
+      "peerDependencies": {
+        "elysia": "^1.2.25",
+      },
     },
     "packages/environment": {
       "name": "@virtualqueue/environment",

@@ -24,6 +24,7 @@ export const ErrorResponseSchema = t.Composite([
         status: t.Union([t.Number(), t.String()]),
         code: t.String(),
         message: t.String(),
+        raw: t.Any(),
     }),
 ]);
 

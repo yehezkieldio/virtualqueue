@@ -8,10 +8,11 @@ process.env = {
 
 export const env = createEnv({
     server: {
-        NODE_ENV: z.enum(["development", "production"]).default("development"),
+        NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
         DATABASE_URL: z.string().url(),
         API_HOST: z.string().default("localhost"),
         API_PORT: z.string().default("3001"),
+        TRACE_LOG: z.coerce.boolean().default(false),
     },
     clientPrefix: "PUBLIC_",
     client: {},

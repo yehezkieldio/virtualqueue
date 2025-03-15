@@ -1,7 +1,17 @@
 import { DefaultReporter } from "@amarislabs/logger";
-import { type ConsolaInstance, createConsola } from "consola";
+import { env } from "@virtualqueue/environment";
+import { type ConsolaInstance, LogLevels, createConsola } from "consola";
 
-export const logger: ConsolaInstance = createConsola().setReporters([
+let logLevel: number =
+    env.NODE_ENV === "test" ? LogLevels.silent : env.NODE_ENV === "production" ? LogLevels.info : LogLevels.debug;
+
+if (env.TRACE_LOG) {
+    logLevel = LogLevels.trace;
+}
+
+export const logger: ConsolaInstance = createConsola({
+    level: logLevel,
+}).setReporters([
     new DefaultReporter({
         addTypeColon: false,
         padding: 8,

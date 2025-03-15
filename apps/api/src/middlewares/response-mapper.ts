@@ -66,6 +66,7 @@ export function useResponseMapperMiddleware() {
                 code: getStatusName(Number(error.code)),
                 details: error.response,
                 status: error.code,
+                raw: "",
                 timestamp: new Date().toISOString(),
             } satisfies ErrorResponse;
 

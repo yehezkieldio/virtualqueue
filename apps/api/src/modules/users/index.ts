@@ -1,8 +1,16 @@
 import { type SQLWrapper, and, asc, db, desc, eq, ilike, isNull, sql } from "@virtualqueue/database";
-import { type RolesType, _selectUser, users } from "@virtualqueue/database/schema";
+import {
+    getErrorMessage,
+    isEnumValueError,
+    isNotNullConstraintError,
+    isUniqueConstraintError,
+} from "@virtualqueue/database/errors";
+import { type RolesType, _createUser, _selectUser, createCuid, users } from "@virtualqueue/database/schema";
 import Elysia, { t } from "elysia";
+import { logger } from "#utils/logger";
 import { PaginationMetaSchema, createPaginatedResponseSchema } from "#utils/response";
 
+const createUserSchema = t.Omit(_createUser, ["id", "createdAt", "updatedAt", "deletedAt"]);
 const userResponseSchema = t.Omit(_selectUser, ["password", "deletedAt"]);
 
 export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).group("/users", (api) =>
@@ -113,6 +121,65 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 },
                 detail: {
                     description: "View user by ID.",
+                },
+            }
+        )
+        .post(
+            "/",
+            async (ctx) => {
+                logger.info("Creating user", ctx.body);
+
+                try {
+                    await db.insert(users).values({
+                        id: createCuid(),
+                        ...ctx.body,
+                        password: await Bun.password.hash(ctx.body.password),
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        deletedAt: null,
+                    });
+                } catch (error) {
+                    if (isUniqueConstraintError(error)) {
+                        throw ctx.error("Conflict", getErrorMessage(error));
+                    }
+
+                    if (isNotNullConstraintError(error)) {
+                        throw ctx.error("Bad Request", getErrorMessage(error));
+                    }
+
+                    if (isEnumValueError(error)) {
+                        throw ctx.error("Bad Request", "Invalid role value provided");
+                    }
+
+                    logger.error("Error creating user", error);
+
+                    ctx.set.status = 500;
+                    throw ctx.error("Internal Server Error", "An error occurred while creating the user.");
+                }
+
+                ctx.set.status = "Created";
+
+                return "User created successfully.";
+            },
+            {
+                body: createUserSchema,
+
+                response: {
+                    201: t.String({
+                        default: "User created successfully.",
+                    }),
+                    400: t.String({
+                        default: "Invalid data provided.",
+                    }),
+                    409: t.String({
+                        default: "Email address is already in use.",
+                    }),
+                    500: t.String({
+                        default: "An error occurred while creating the user.",
+                    }),
+                },
+                detail: {
+                    description: "Create a new user.",
                 },
             }
         )
