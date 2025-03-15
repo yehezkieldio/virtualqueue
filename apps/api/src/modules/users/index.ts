@@ -403,4 +403,138 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                 },
             }
         )
+        /* -------------------------------------------------------------------------- */
+        .delete(
+            "/:id",
+            async (ctx) => {
+                const permanentDelete: boolean = ctx.query.permanent === "true";
+                const userId: string = ctx.params.id;
+
+                const existingUser = await db.query.users.findFirst({
+                    where: eq(users.id, userId),
+                });
+
+                if (!existingUser) {
+                    throw ctx.error("Not Found", "User not found.");
+                }
+
+                try {
+                    if (permanentDelete) {
+                        await db.delete(users).where(eq(users.id, userId));
+                        logger.info(`User ${userId} permanently deleted`);
+
+                        ctx.set.status = 200;
+                        return "User permanently deleted.";
+                    }
+
+                    await db
+                        .update(users)
+                        .set({
+                            deletedAt: new Date(),
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(users.id, userId));
+                    logger.info(`User ${userId} soft deleted`);
+
+                    ctx.set.status = 200;
+                    return "User deleted.";
+                } catch (error) {
+                    logger.error("Error deleting user", error);
+                    throw ctx.error("Internal Server Error", "An error occurred while deleting the user.");
+                }
+            },
+            {
+                params: t.Object({
+                    id: t.String({
+                        description: "The ID of the user to delete.",
+                    }),
+                }),
+                query: t.Object({
+                    permanent: t.Optional(
+                        t.String({
+                            description: "Whether to permanently delete the user.",
+                            enum: ["true", "false"],
+                            default: "false",
+                        })
+                    ),
+                }),
+                response: {
+                    200: t.String({
+                        description: "Success message",
+                        default: "User deleted.",
+                    }),
+                    404: t.String({
+                        default: "User not found.",
+                    }),
+                    500: t.String({
+                        default: "An error occurred while deleting the user.",
+                    }),
+                },
+                detail: {
+                    description: "Delete a user (soft delete by default, permanent if ?permanent=true).",
+                },
+            }
+        )
+        /* -------------------------------------------------------------------------- */
+        .post(
+            "/:id/restore",
+            async (ctx) => {
+                const userId: string = ctx.params.id;
+
+                const existingUser = await db.query.users.findFirst({
+                    where: eq(users.id, userId),
+                });
+
+                if (!existingUser) {
+                    throw ctx.error("Not Found", "User not found.");
+                }
+
+                if (!existingUser.deletedAt) {
+                    throw ctx.error("Bad Request", "User is not deleted.");
+                }
+
+                try {
+                    await db
+                        .update(users)
+                        .set({
+                            deletedAt: null,
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(users.id, userId));
+
+                    logger.info(`User ${userId} restored`);
+
+                    ctx.set.status = 200;
+                    return "User restored successfully.";
+                } catch (error) {
+                    logger.error("Error restoring user", error);
+                    throw ctx.error("Internal Server Error", "An error occurred while restoring the user.");
+                }
+            },
+            {
+                params: t.Object({
+                    id: t.String({
+                        description: "The ID of the user to restore.",
+                    }),
+                }),
+                response: {
+                    200: t.String({
+                        description: "Success message",
+                        default: "User restored successfully.",
+                    }),
+                    400: t.String({
+                        default: "User is not deleted.",
+                    }),
+                    404: t.String({
+                        default: "User not found.",
+                    }),
+                    500: t.String({
+                        default: "An error occurred while restoring the user.",
+                    }),
+                },
+                detail: {
+                    description: "Restore a soft-deleted user.",
+                },
+            }
+        )
 );
