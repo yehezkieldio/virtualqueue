@@ -1,6 +1,7 @@
 import os from "node:os";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
+import Elysia from "elysia";
 import { logger } from "#utils/logger";
 
 const prometheusExporter = new PrometheusExporter({ port: 9464 });
@@ -11,20 +12,16 @@ const meterProvider = new MeterProvider({
 
 const meter = meterProvider.getMeter("memory-metrics");
 
-export const requestCounter = meter.createCounter("http_requests_total", {
+const requestCounter = meter.createCounter("http_requests_total", {
     description: "Total number of HTTP requests",
 });
 
-export const requestDurationHistogram = meter.createHistogram("http_request_duration_seconds", {
-    description: "HTTP request duration in seconds",
-});
-
 const memoryUsageGauge = meter.createObservableGauge("process_memory_usage_bytes", {
-    description: "Memory usage of the Node.js process",
+    description: "Memory usage of the process",
 });
 
 const cpuUsageGauge = meter.createObservableGauge("process_cpu_usage_percentage", {
-    description: "CPU usage percentage of the Node.js process",
+    description: "CPU usage percentage of the process",
 });
 
 const systemMemoryGauge = meter.createObservableGauge("system_memory_usage", {
@@ -85,6 +82,17 @@ systemLoadGauge.addCallback((observableResult) => {
     observableResult.observe(loadAvg[1] as number, { period: "5m" });
     observableResult.observe(loadAvg[2] as number, { period: "15m" });
 });
+
+export const useMetricsMiddleware = () => {
+    return new Elysia({
+        name: "Middleware.Metrics",
+    }).onRequest(({ request }) => {
+        requestCounter.add(1, {
+            method: request.method,
+            path: new URL(request.url).pathname,
+        });
+    });
+};
 
 export const startMetrics = () => {
     logger.info("Metrics collection started!");

@@ -6,7 +6,7 @@ import { env } from "@virtualqueue/environment";
 import { Elysia, t } from "elysia";
 import type { Server } from "elysia/universal";
 import { logger } from "#utils/logger";
-import { startMetrics } from "#utils/metrics";
+import { startMetrics, useMetricsMiddleware } from "#utils/metrics";
 import { useLoggerMiddleware } from "./middlewares/logger";
 import { useResponseMapperMiddleware } from "./middlewares/response-mapper";
 import { usersModule } from "./modules/users";
@@ -73,7 +73,8 @@ const api = new Elysia()
     .use(swagger(swaggerConfig))
     .use(healthModule)
     .use(metricsModule)
-    .use(usersModule);
+    .use(usersModule)
+    .use(useMetricsMiddleware());
 
 api.listen(env.API_PORT, (server: Server): void => {
     logger.info(`API server is running at ${server.url}`);
