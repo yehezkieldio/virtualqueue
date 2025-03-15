@@ -36,7 +36,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .get(
             "/",
             async ({ query }) => {
-                return await record("users.query.find.all", async () => {
+                return await record("users.find.all", async () => {
                     const page = Math.max(1, Number(query.page) || 1);
                     const limit = Math.max(1, Number(query.limit) || 10);
                     const search = query.search as string | undefined;
@@ -57,7 +57,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                         conditions.push(eq(users.role, role as RolesType));
                     }
 
-                    const totalItemsResult = await record("database.query.users.count", async () => {
+                    const totalItemsResult = await record("database.users.count", async () => {
                         return await db
                             .select({
                                 count: sql<number>`cast(count(*) as int)`,
@@ -68,7 +68,7 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
 
                     const totalItems: number = totalItemsResult[0]?.count || 0;
 
-                    const usersList = await record("database.query.users.find.many", async () => {
+                    const usersList = await record("database.users.many.offset", async () => {
                         return await db
                             .select()
                             .from(users)
@@ -111,8 +111,8 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .get(
             "/:id",
             async (ctx) => {
-                return await record("users.query.find.one", async () => {
-                    const user = await record("database.query.users.findFirst", async () => {
+                return await record("users.find.one", async () => {
+                    const user = await record("database.users.first", async () => {
                         return await db.query.users.findFirst({
                             where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
                             columns: {
@@ -150,52 +150,56 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .post(
             "/",
             async (ctx) => {
-                if (validatePassword(ctx.body.password) !== true) {
-                    throw ctx.error("Bad Request", getPasswordValidationIssues(ctx.body.password).join(", "));
-                }
+                return await record("users.create", async () => {
+                    if (validatePassword(ctx.body.password) !== true) {
+                        throw ctx.error("Bad Request", getPasswordValidationIssues(ctx.body.password).join(", "));
+                    }
 
-                try {
-                    const newUser = await db
-                        .insert(users)
-                        .values({
-                            id: cuid(),
-                            ...ctx.body,
-                            password: await Bun.password.hash(ctx.body.password),
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                            deletedAt: null,
-                        })
-                        .returning({
-                            id: users.id,
-                            email: users.email,
-                            fullname: users.fullname,
-                            role: users.role,
-                            photo: users.photo,
-                            phoneNumber: users.phoneNumber,
-                            lastLogin: users.lastLogin,
-                            preferences: users.preferences,
-                            createdAt: users.createdAt,
-                            updatedAt: users.updatedAt,
+                    try {
+                        const newUser = await record("database.users.insert", async () => {
+                            return await db
+                                .insert(users)
+                                .values({
+                                    id: cuid(),
+                                    ...ctx.body,
+                                    password: await Bun.password.hash(ctx.body.password),
+                                    createdAt: new Date(),
+                                    updatedAt: new Date(),
+                                    deletedAt: null,
+                                })
+                                .returning({
+                                    id: users.id,
+                                    email: users.email,
+                                    fullname: users.fullname,
+                                    role: users.role,
+                                    photo: users.photo,
+                                    phoneNumber: users.phoneNumber,
+                                    lastLogin: users.lastLogin,
+                                    preferences: users.preferences,
+                                    createdAt: users.createdAt,
+                                    updatedAt: users.updatedAt,
+                                });
                         });
 
-                    ctx.set.status = "Created";
-                    return newUser[0];
-                } catch (error) {
-                    if (isUniqueConstraintError(error)) {
-                        throw ctx.error("Conflict", getErrorMessage(error));
-                    }
+                        ctx.set.status = "Created";
+                        return newUser[0];
+                    } catch (error) {
+                        if (isUniqueConstraintError(error)) {
+                            throw ctx.error("Conflict", getErrorMessage(error));
+                        }
 
-                    if (isNotNullConstraintError(error)) {
-                        throw ctx.error("Bad Request", getErrorMessage(error));
-                    }
+                        if (isNotNullConstraintError(error)) {
+                            throw ctx.error("Bad Request", getErrorMessage(error));
+                        }
 
-                    if (isEnumValueError(error)) {
-                        throw ctx.error("Bad Request", "Invalid role value provided");
-                    }
+                        if (isEnumValueError(error)) {
+                            throw ctx.error("Bad Request", "Invalid role value provided");
+                        }
 
-                    ctx.set.status = 500;
-                    throw ctx.error("Internal Server Error", "An error occurred while creating the user.");
-                }
+                        ctx.set.status = 500;
+                        throw ctx.error("Internal Server Error", "An error occurred while creating the user.");
+                    }
+                });
             },
             {
                 body: createUserSchema,
@@ -220,56 +224,66 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .put(
             "/:id",
             async (ctx) => {
-                const existingUser = await db.query.users.findFirst({
-                    where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
-                });
+                return await record("users.update", async () => {
+                    const existingUser = await record("database.users.first", async () => {
+                        return await db.query.users.findFirst({
+                            where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
+                            columns: {
+                                password: false,
+                                deletedAt: false,
+                            },
+                        });
+                    });
 
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
+                    if (!existingUser) {
+                        throw ctx.error("Not Found", "User not found.");
+                    }
 
-                try {
-                    const updatedUser = await db
-                        .update(users)
-                        .set({
-                            ...ctx.body,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, ctx.params.id))
-                        .returning({
-                            id: users.id,
-                            email: users.email,
-                            fullname: users.fullname,
-                            role: users.role,
-                            photo: users.photo,
-                            phoneNumber: users.phoneNumber,
-                            lastLogin: users.lastLogin,
-                            preferences: users.preferences,
-                            createdAt: users.createdAt,
-                            updatedAt: users.updatedAt,
+                    try {
+                        const updatedUser = await record("database.users.update", async () => {
+                            return await db
+                                .update(users)
+                                .set({
+                                    ...ctx.body,
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(users.id, ctx.params.id))
+                                .returning({
+                                    id: users.id,
+                                    email: users.email,
+                                    fullname: users.fullname,
+                                    role: users.role,
+                                    photo: users.photo,
+                                    phoneNumber: users.phoneNumber,
+                                    lastLogin: users.lastLogin,
+                                    preferences: users.preferences,
+                                    createdAt: users.createdAt,
+                                    updatedAt: users.updatedAt,
+                                });
                         });
 
-                    if (!updatedUser[0]) {
-                        throw ctx.error("Internal Server Error", "Failed to update user");
-                    }
+                        if (!updatedUser[0]) {
+                            throw ctx.error("Internal Server Error", "Failed to update user");
+                        }
 
-                    ctx.set.status = 200;
-                    return updatedUser[0];
-                } catch (error) {
-                    if (isUniqueConstraintError(error)) {
-                        throw ctx.error("Conflict", getErrorMessage(error));
-                    }
+                        ctx.set.status = 200;
+                        return updatedUser[0];
+                    } catch (error) {
+                        if (isUniqueConstraintError(error)) {
+                            throw ctx.error("Conflict", getErrorMessage(error));
+                        }
 
-                    if (isNotNullConstraintError(error)) {
-                        throw ctx.error("Bad Request", getErrorMessage(error));
-                    }
+                        if (isNotNullConstraintError(error)) {
+                            throw ctx.error("Bad Request", getErrorMessage(error));
+                        }
 
-                    if (isEnumValueError(error)) {
-                        throw ctx.error("Bad Request", "Invalid role value provided");
-                    }
+                        if (isEnumValueError(error)) {
+                            throw ctx.error("Bad Request", "Invalid role value provided");
+                        }
 
-                    throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
-                }
+                        throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
+                    }
+                });
             },
             {
                 params: t.Object({
@@ -302,37 +316,46 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .put(
             "/:id/password",
             async (ctx) => {
-                const existingUser = await db.query.users.findFirst({
-                    where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
+                return await record("users.update.password", async () => {
+                    const existingUser = await record("database.users.first", async () => {
+                        return await db.query.users.findFirst({
+                            where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
+                            columns: {
+                                deletedAt: false,
+                            },
+                        });
+                    });
+
+                    if (!existingUser) {
+                        throw ctx.error("Not Found", "User not found.");
+                    }
+
+                    const isValidPassword = await Bun.password.verify(ctx.body.oldPassword, existingUser.password);
+                    if (!isValidPassword) {
+                        throw ctx.error("Bad Request", "Current password is incorrect.");
+                    }
+
+                    if (!validatePassword(ctx.body.password)) {
+                        throw ctx.error("Bad Request", getPasswordValidationIssues(ctx.body.password).join(", "));
+                    }
+
+                    try {
+                        await record("database.query.users.update.password", async () => {
+                            return await db
+                                .update(users)
+                                .set({
+                                    password: await Bun.password.hash(ctx.body.password),
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(users.id, ctx.params.id));
+                        });
+                    } catch (_error) {
+                        throw ctx.error("Internal Server Error", "An error occurred while updating the user password.");
+                    }
+
+                    ctx.set.status = 200;
+                    return "User password updated successfully.";
                 });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                const isValidPassword = await Bun.password.verify(ctx.body.oldPassword, existingUser.password);
-                if (!isValidPassword) {
-                    throw ctx.error("Bad Request", "Current password is incorrect.");
-                }
-
-                if (!validatePassword(ctx.body.password)) {
-                    throw ctx.error("Bad Request", getPasswordValidationIssues(ctx.body.password).join(", "));
-                }
-
-                try {
-                    await db
-                        .update(users)
-                        .set({
-                            password: await Bun.password.hash(ctx.body.password),
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, ctx.params.id));
-                } catch (_error) {
-                    throw ctx.error("Internal Server Error", "An error occurred while updating the user password.");
-                }
-
-                ctx.set.status = 200;
-                return "User password updated successfully.";
             },
             {
                 params: t.Object({
@@ -371,58 +394,68 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .patch(
             "/:id",
             async (ctx) => {
-                const existingUser = await db.query.users.findFirst({
-                    where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
-                });
+                return await record("users.update.partial", async () => {
+                    const existingUser = await record("database.users.first", async () => {
+                        return await db.query.users.findFirst({
+                            where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
+                            columns: {
+                                password: false,
+                                deletedAt: false,
+                            },
+                        });
+                    });
 
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
+                    if (!existingUser) {
+                        throw ctx.error("Not Found", "User not found.");
+                    }
 
-                try {
-                    const updateData: Partial<typeof ctx.body> = { ...ctx.body };
+                    try {
+                        const updateData: Partial<typeof ctx.body> = { ...ctx.body };
 
-                    const updatedUser = await db
-                        .update(users)
-                        .set({
-                            ...updateData,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, ctx.params.id))
-                        .returning({
-                            id: users.id,
-                            email: users.email,
-                            fullname: users.fullname,
-                            role: users.role,
-                            photo: users.photo,
-                            phoneNumber: users.phoneNumber,
-                            lastLogin: users.lastLogin,
-                            preferences: users.preferences,
-                            createdAt: users.createdAt,
-                            updatedAt: users.updatedAt,
+                        const updatedUser = await record("database.users.update.partial", async () => {
+                            return await db
+                                .update(users)
+                                .set({
+                                    ...updateData,
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(users.id, ctx.params.id))
+                                .returning({
+                                    id: users.id,
+                                    email: users.email,
+                                    fullname: users.fullname,
+                                    role: users.role,
+                                    photo: users.photo,
+                                    phoneNumber: users.phoneNumber,
+                                    lastLogin: users.lastLogin,
+                                    preferences: users.preferences,
+                                    createdAt: users.createdAt,
+                                    updatedAt: users.updatedAt,
+                                });
                         });
 
-                    if (!updatedUser[0]) {
-                        throw ctx.error("Internal Server Error", "Failed to update user");
-                    }
+                        if (!updatedUser[0]) {
+                            throw ctx.error("Internal Server Error", "Failed to update user");
+                        }
 
-                    ctx.set.status = 200;
-                    return updatedUser[0];
-                } catch (error) {
-                    if (isUniqueConstraintError(error)) {
-                        throw ctx.error("Conflict", getErrorMessage(error));
-                    }
+                        ctx.set.status = 200;
+                        return updatedUser[0];
+                    } catch (error) {
+                        if (isUniqueConstraintError(error)) {
+                            throw ctx.error("Conflict", getErrorMessage(error));
+                        }
 
-                    if (isNotNullConstraintError(error)) {
-                        throw ctx.error("Bad Request", getErrorMessage(error));
-                    }
+                        if (isNotNullConstraintError(error)) {
+                            throw ctx.error("Bad Request", getErrorMessage(error));
+                        }
 
-                    if (isEnumValueError(error)) {
-                        throw ctx.error("Bad Request", "Invalid role value provided");
-                    }
+                        if (isEnumValueError(error)) {
+                            throw ctx.error("Bad Request", "Invalid role value provided");
+                        }
 
-                    throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
-                }
+                        throw ctx.error("Internal Server Error", "An error occurred while updating the user.");
+                    }
+                });
             },
             {
                 params: t.Object({
@@ -455,38 +488,50 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .delete(
             "/:id",
             async (ctx) => {
-                const permanentDelete: boolean = ctx.query.permanent === "true";
-                const userId: string = ctx.params.id;
+                return await record("users.delete", async () => {
+                    const permanentDelete: boolean = ctx.query.permanent === "true";
+                    const userId: string = ctx.params.id;
 
-                const existingUser = await db.query.users.findFirst({
-                    where: and(eq(users.id, userId), isNull(users.deletedAt)),
-                });
+                    const existingUser = await record("database.users.first", async () => {
+                        return await db.query.users.findFirst({
+                            where: and(eq(users.id, ctx.params.id), isNull(users.deletedAt)),
+                            columns: {
+                                password: false,
+                                deletedAt: false,
+                            },
+                        });
+                    });
 
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                try {
-                    if (permanentDelete) {
-                        await db.delete(users).where(eq(users.id, userId));
-
-                        ctx.set.status = 200;
-                        return "User permanently deleted.";
+                    if (!existingUser) {
+                        throw ctx.error("Not Found", "User not found.");
                     }
 
-                    await db
-                        .update(users)
-                        .set({
-                            deletedAt: new Date(),
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, userId));
-                } catch (_error) {
-                    throw ctx.error("Internal Server Error", "An error occurred while deleting the user.");
-                }
+                    try {
+                        if (permanentDelete) {
+                            await record("database.users.delete.permanent", async () => {
+                                return await db.delete(users).where(eq(users.id, userId));
+                            });
 
-                ctx.set.status = 200;
-                return "User deleted.";
+                            ctx.set.status = 200;
+                            return "User permanently deleted.";
+                        }
+
+                        await record("database.users.delete.soft", async () => {
+                            return await db
+                                .update(users)
+                                .set({
+                                    deletedAt: new Date(),
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(users.id, userId));
+                        });
+                    } catch (_error) {
+                        throw ctx.error("Internal Server Error", "An error occurred while deleting the user.");
+                    }
+
+                    ctx.set.status = 200;
+                    return "User deleted.";
+                });
             },
             {
                 params: t.Object({
@@ -524,34 +569,43 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
         .post(
             "/:id/restore",
             async (ctx) => {
-                const userId: string = ctx.params.id;
+                return await record("users.restore", async () => {
+                    const userId: string = ctx.params.id;
 
-                const existingUser = await db.query.users.findFirst({
-                    where: eq(users.id, userId),
+                    const existingUser = await record("database.users.findFirst", async () => {
+                        return await db.query.users.findFirst({
+                            where: eq(users.id, ctx.params.id),
+                            columns: {
+                                password: false,
+                            },
+                        });
+                    });
+
+                    if (!existingUser) {
+                        throw ctx.error("Not Found", "User not found.");
+                    }
+
+                    if (!existingUser.deletedAt) {
+                        throw ctx.error("Bad Request", "User is not deleted.");
+                    }
+
+                    try {
+                        await record("database.users.restore", async () => {
+                            return await db
+                                .update(users)
+                                .set({
+                                    deletedAt: null,
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(users.id, userId));
+                        });
+                    } catch (_error) {
+                        throw ctx.error("Internal Server Error", "An error occurred while restoring the user.");
+                    }
+
+                    ctx.set.status = 200;
+                    return "User restored successfully.";
                 });
-
-                if (!existingUser) {
-                    throw ctx.error("Not Found", "User not found.");
-                }
-
-                if (!existingUser.deletedAt) {
-                    throw ctx.error("Bad Request", "User is not deleted.");
-                }
-
-                try {
-                    await db
-                        .update(users)
-                        .set({
-                            deletedAt: null,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(users.id, userId));
-                } catch (_error) {
-                    throw ctx.error("Internal Server Error", "An error occurred while restoring the user.");
-                }
-
-                ctx.set.status = 200;
-                return "User restored successfully.";
             },
             {
                 params: t.Object({
