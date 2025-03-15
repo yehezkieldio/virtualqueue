@@ -263,3 +263,8 @@ export const popularEvents = pgMaterializedView("popular_events").as((qb) =>
         .groupBy(tickets.eventId)
         .orderBy(sql`${sql<number>`cast(count(*) as int)`.as("ticket_count")} desc`)
 );
+
+/**
+ * TODO: Reintroduce Drizzle soft relations back.
+ * FIXME: Currently removed due to the error There is not enough information to infer relation "__public__.events.tickets"
+ */
