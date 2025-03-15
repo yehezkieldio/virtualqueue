@@ -149,21 +149,6 @@ export const queues = pgTable(
     ]
 );
 
-export const usersRelations = relations(users, ({ many }) => ({
-    events: many(events, { relationName: "creator" }),
-    tickets: many(tickets),
-    queueItems: many(queueItems),
-}));
-
-export const eventsRelations = relations(events, ({ one, many }) => ({
-    creator: one(users, {
-        fields: [events.creatorId],
-        references: [users.id],
-    }),
-    tickets: many(tickets),
-    queues: many(queues),
-}));
-
 export const queueItemStatusEnum = pgEnum("queue_item_status", ["WAITING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);
 
 export const queueItems = pgTable(
@@ -270,3 +255,18 @@ export const popularEvents = pgMaterializedView("popular_events").as((qb) =>
         .groupBy(tickets.eventId)
         .orderBy(sql`${sql<number>`cast(count(*) as int)`.as("ticket_count")} desc`)
 );
+
+export const usersRelations = relations(users, ({ many }) => ({
+    events: many(events, { relationName: "creator" }),
+    tickets: many(tickets),
+    queueItems: many(queueItems),
+}));
+
+export const eventsRelations = relations(events, ({ one, many }) => ({
+    creator: one(users, {
+        fields: [events.creatorId],
+        references: [users.id],
+    }),
+    tickets: many(tickets),
+    queues: many(queues),
+}));
