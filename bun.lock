@@ -16,10 +16,12 @@
       "version": "0.0.0",
       "dependencies": {
         "@amarislabs/logger": "^1.2.1",
+        "@elysiajs/jwt": "^1.2.0",
         "@elysiajs/opentelemetry": "^1.2.0",
         "@elysiajs/swagger": "^1.2.2",
         "@opentelemetry/exporter-prometheus": "^0.57.2",
         "@virtualqueue/database": "workspace:*",
+        "@virtualqueue/dragonfly": "workspace:*",
         "@virtualqueue/environment": "workspace:*",
         "drizzle-typebox": "^0.3.0",
         "elysia": "^1.2.25",
@@ -98,6 +100,8 @@
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@1.9.4", "", { "os": "win32", "cpu": "x64" }, "sha512-8Y5wMhVIPaWe6jw2H+KlEm4wP/f7EW3810ZLmDlrEEy5KvBsb9ECEfu/kMWD484ijfQ8+nIi0giMgu9g1UAuuA=="],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
+
+    "@elysiajs/jwt": ["@elysiajs/jwt@1.2.0", "", { "dependencies": { "jose": "^4.14.4" }, "peerDependencies": { "elysia": ">= 1.2.0" } }, "sha512-5iMoZucIKNAqPKW3n6RBIyCnDWG3kOcqA4WZKtqEff+IjV6AN3dlMSE2XsS0xjIvusLD0UBXS8cxQ9NwIcj6ew=="],
 
     "@elysiajs/opentelemetry": ["@elysiajs/opentelemetry@1.2.0", "", { "dependencies": { "@opentelemetry/api": "^1.9.0", "@opentelemetry/instrumentation": "^0.54.0", "@opentelemetry/sdk-node": "^0.54.0" }, "peerDependencies": { "elysia": ">= 1.2.0" } }, "sha512-xx7hx9efBkqqaeMmIlKYipQHCyEG2lRetKwMFO89vz9KWqpUulr52b3r7sjPBmnas0VD54rCQDlUsG+n8QPdBw=="],
 
@@ -342,6 +346,8 @@
     "is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
 
     "isexe": ["isexe@3.1.1", "", {}, "sha512-LpB/54B+/2J5hqQ7imZHfdU31OlgQqx7ZicVlkm9kzg9/w8GKLEcFfJl/t7DCEDueOyBAD6zCCwTO6Fzs0NoEQ=="],
+
+    "jose": ["jose@4.15.9", "", {}, "sha512-1vUQX+IdDMVPj4k8kOxgUqlcK518yluMuGZwqlr44FS1ppZB/5GWh4rZG89erpOBOJjU/OBsnCVFfapsRz6nEA=="],
 
     "lodash.camelcase": ["lodash.camelcase@4.3.0", "", {}, "sha512-TwuEnCnxbc3rAvhf/LbG7tJUDzhqXyFnv3dtzLOPgCG/hODL7WFnsbwktkD7yUV0RrreP/l1PALq/YSg6VvjlA=="],
 

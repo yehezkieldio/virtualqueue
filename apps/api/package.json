@@ -10,10 +10,12 @@
     },
     "dependencies": {
         "@amarislabs/logger": "^1.2.1",
+        "@elysiajs/jwt": "^1.2.0",
         "@elysiajs/opentelemetry": "^1.2.0",
         "@elysiajs/swagger": "^1.2.2",
         "@opentelemetry/exporter-prometheus": "^0.57.2",
         "@virtualqueue/database": "workspace:*",
+        "@virtualqueue/dragonfly": "workspace:*",
         "@virtualqueue/environment": "workspace:*",
         "drizzle-typebox": "^0.3.0",
         "elysia": "^1.2.25"
