@@ -61,6 +61,32 @@ export const users = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/*                                  SESSIONS                                  */
+/* -------------------------------------------------------------------------- */
+
+export const sessions = pgTable(
+    "session",
+    {
+        id: primaryId,
+        userId: varchar("user_id", { length: 24 })
+            .notNull()
+            .references(() => users.id),
+        token: varchar("token", { length: 255 }).notNull(),
+        userAgent: varchar("user_agent", { length: 255 }),
+        ip: varchar("ip", { length: 45 }),
+        expiresAt: timestamp("expires_at").notNull(),
+        lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        index("session_user_id_idx").on(table.userId),
+        index("session_token_idx").on(table.token),
+        index("session_created_at_idx").on(table.createdAt),
+        index("session_last_active_at_idx").on(table.lastActiveAt),
+    ]
+);
+
+/* -------------------------------------------------------------------------- */
 /*                                   EVENTS                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -298,6 +324,7 @@ export const webhooks = pgTable(
 
 export const table = {
     users,
+    sessions,
     events,
     tickets,
     queues,

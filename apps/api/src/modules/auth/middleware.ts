@@ -3,6 +3,8 @@ import { record } from "@elysiajs/opentelemetry";
 import { dragonfly } from "@virtualqueue/dragonfly";
 import { env } from "@virtualqueue/environment";
 import Elysia from "elysia";
+import { updateSessionActivity } from "./session";
+import { ACCESS_TOKEN_EXPIRATION } from "./utils";
 
 export const authMiddleware = new Elysia({ name: "Middleware.Auth" }).use(
     jwt({
@@ -34,14 +36,44 @@ export const authMiddleware = new Elysia({ name: "Middleware.Auth" }).use(
             throw error("Forbidden", "Invalid token");
         }
 
-        if (jwtPayload.exp && jwtPayload.exp < Date.now() / 1000) {
+        const currentTime = Math.floor(Date.now() / 1000);
+        const tokenExp = jwtPayload.exp;
+
+        if (tokenExp < currentTime) {
             set.status = "Forbidden";
             throw error("Forbidden", "Token expired");
         }
 
+        const timeToExpire = tokenExp - currentTime;
+        const refreshThreshold = ACCESS_TOKEN_EXPIRATION * 0.3; // Refresh if less than 30% of time remains
+
+        let newToken = "";
+        if (timeToExpire < refreshThreshold) {
+            newToken = await jwt.sign({
+                sub: jwtPayload.sub!,
+                iat: currentTime,
+                exp: currentTime + ACCESS_TOKEN_EXPIRATION,
+            });
+
+            accessToken.set({
+                value: newToken,
+                httpOnly: true,
+                maxAge: ACCESS_TOKEN_EXPIRATION,
+                path: "/",
+                sameSite: "strict",
+                secure: env.NODE_ENV === "production", // Only HTTPS in production
+            });
+
+            if (typeof jwtPayload.jti === "string" && jwtPayload.jti) {
+                await updateSessionActivity(jwtPayload.jti).catch(() => {
+                    // Silently fail, don't block the request if session update fails
+                });
+            }
+        }
+
         return {
             user: jwtPayload,
-            accessToken: accessToken.value,
+            accessToken: newToken || accessToken.value,
         };
     })
 );

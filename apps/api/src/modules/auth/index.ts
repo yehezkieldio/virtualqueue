@@ -8,6 +8,7 @@ import { dragonfly } from "@virtualqueue/dragonfly";
 import { env } from "@virtualqueue/environment";
 import Elysia, { type Cookie, t } from "elysia";
 import { authMiddleware } from "./middleware";
+import { createSession, getActiveSessions, terminateSession } from "./session";
 import { ACCESS_TOKEN_EXPIRATION, REFRESH_TOKEN_EXPIRATION, getExpireTimestamp } from "./utils";
 
 export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).group("/auth", (api) =>
@@ -19,7 +20,7 @@ export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).gr
             /* -------------------------------------------------------------------------- */
             .post(
                 "/signin",
-                async ({ body, cookie: { accessToken, refreshToken }, jwt, error }) => {
+                async ({ body, cookie: { accessToken, refreshToken }, jwt, error, request }) => {
                     return await record("auth.signin", async () => {
                         const user = await record("database.users.first", async () => {
                             return await db.query.users.findFirst({
@@ -39,10 +40,28 @@ export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).gr
                             throw error("Bad Request", "Invalid password.");
                         }
 
+                        const sessionId = cuid();
+
                         const initialAccessToken: string = await jwt.sign({
                             sub: user.id,
                             iat: Math.floor(Date.now() / 1000),
                             exp: getExpireTimestamp(ACCESS_TOKEN_EXPIRATION),
+                            jti: sessionId,
+                        });
+
+                        const initialRefreshToken = await jwt.sign({
+                            sub: user.id,
+                            exp: getExpireTimestamp(REFRESH_TOKEN_EXPIRATION),
+                            iat: Math.floor(Date.now() / 1000),
+                            jti: sessionId,
+                        });
+
+                        await createSession(user.id, initialRefreshToken, {
+                            userAgent: request.headers.get("user-agent") || undefined,
+                            ip:
+                                (request.headers.get("x-forwarded-for") as string) ||
+                                (request.headers.get("x-real-ip") as string),
+                            expiresAt: new Date(getExpireTimestamp(REFRESH_TOKEN_EXPIRATION) * 1000),
                         });
 
                         if (accessToken) {
@@ -51,15 +70,10 @@ export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).gr
                                 httpOnly: true,
                                 maxAge: ACCESS_TOKEN_EXPIRATION,
                                 path: "/",
+                                sameSite: "strict",
+                                secure: env.NODE_ENV === "production", // Only HTTPS in production
                             });
                         }
-
-                        const initialRefreshToken = await jwt.sign({
-                            sub: user.id,
-                            exp: getExpireTimestamp(REFRESH_TOKEN_EXPIRATION),
-                            iat: Math.floor(Date.now() / 1000),
-                            jti: cuid(),
-                        });
 
                         if (refreshToken) {
                             refreshToken.set({
@@ -229,6 +243,15 @@ export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).gr
                                     return;
                                 }
 
+                                if (
+                                    decoded &&
+                                    typeof decoded === "object" &&
+                                    "jti" in decoded &&
+                                    typeof decoded.jti === "string"
+                                ) {
+                                    await terminateSession(decoded.jti!);
+                                }
+
                                 const ttl: number = decoded.exp - Math.floor(Date.now() / 1000);
                                 if (ttl > 0) {
                                     await record("dragonfly.blacklist.add", async () =>
@@ -256,6 +279,112 @@ export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).gr
                     },
                     detail: {
                         description: "Sign out a user",
+                    },
+                }
+            )
+            /* -------------------------------------------------------------------------- */
+            .get(
+                "/sessions",
+                async ({ user, error }) => {
+                    try {
+                        if (!user || typeof user !== "object" || !("sub" in user) || typeof user.sub !== "string") {
+                            throw error("Unauthorized", "Invalid user token");
+                        }
+
+                        const sessions = await getActiveSessions(user.sub);
+                        return { sessions };
+                    } catch (_error) {
+                        throw error("Internal Server Error", "Failed to retrieve sessions");
+                    }
+                },
+                {
+                    response: {
+                        200: t.Object({
+                            sessions: t.Array(
+                                t.Object({
+                                    id: t.String(),
+                                    userAgent: t.Optional(t.String()),
+                                    ip: t.Optional(t.String()),
+                                    createdAt: t.String(),
+                                    lastActiveAt: t.String(),
+                                })
+                            ),
+                        }),
+                        401: t.String(),
+                        500: t.String(),
+                    },
+                    detail: {
+                        description: "Get all active sessions for the current user",
+                    },
+                }
+            )
+            /* -------------------------------------------------------------------------- */
+            .delete(
+                "/sessions/:sessionId",
+                async ({ params, user, error }) => {
+                    try {
+                        if (!user || typeof user !== "object" || !("sub" in user) || typeof user.sub !== "string") {
+                            throw error("Unauthorized", "Invalid user token");
+                        }
+
+                        await terminateSession(params.sessionId);
+                        return { message: "Session terminated successfully" };
+                    } catch (_error) {
+                        throw error("Internal Server Error", "Failed to terminate session");
+                    }
+                },
+                {
+                    params: t.Object({
+                        sessionId: t.String(),
+                    }),
+                    response: {
+                        200: t.Object({
+                            message: t.String(),
+                        }),
+                        401: t.String(),
+                        500: t.String(),
+                    },
+                    detail: {
+                        description: "Terminate a specific session",
+                    },
+                }
+            )
+            /* -------------------------------------------------------------------------- */
+            .delete(
+                "/sessions",
+                async ({ user, error, query }) => {
+                    try {
+                        if (
+                            !user ||
+                            typeof user !== "object" ||
+                            !("sub" in user) ||
+                            typeof user.sub !== "string" ||
+                            !("jti" in user)
+                        ) {
+                            throw error("Unauthorized", "Invalid user token");
+                        }
+
+                        const exceptCurrent = query?.exceptCurrent === "true";
+                        await terminateAllUserSessions(user.sub, exceptCurrent ? String(user.jti) : undefined);
+
+                        return { message: "All sessions terminated successfully" };
+                    } catch (_error) {
+                        throw error("Internal Server Error", "Failed to terminate sessions");
+                    }
+                },
+                {
+                    query: t.Object({
+                        exceptCurrent: t.Optional(t.String()),
+                    }),
+                    response: {
+                        200: t.Object({
+                            message: t.String(),
+                        }),
+                        401: t.String(),
+                        500: t.String(),
+                    },
+                    detail: {
+                        description: "Terminate all sessions for the current user",
                     },
                 }
             )
