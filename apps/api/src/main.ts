@@ -6,11 +6,13 @@ import { env } from "@virtualqueue/environment";
 import { Elysia, t } from "elysia";
 import type { Server } from "elysia/universal";
 import { logger } from "#utils/logger";
+import { startMetrics } from "#utils/metrics";
 import { useLoggerMiddleware } from "./middlewares/logger";
 import { useResponseMapperMiddleware } from "./middlewares/response-mapper";
 import { usersModule } from "./modules/users";
 
 logger.info("Starting API server...");
+startMetrics();
 
 const healthModule = new Elysia().get(
     "/health",
@@ -34,6 +36,10 @@ const healthModule = new Elysia().get(
         },
     }
 );
+
+const metricsModule = new Elysia().get("/metrics", () => {
+    return fetch("http://localhost:9464/metrics").then((res) => res.text());
+});
 
 const swaggerConfig = {
     path: "/reference",
@@ -65,8 +71,9 @@ const api = new Elysia()
     .use(useResponseMapperMiddleware())
     .use(opentelemetry(openTelemetryConfig))
     .use(swagger(swaggerConfig))
-    .use(usersModule)
-    .use(healthModule);
+    .use(healthModule)
+    .use(metricsModule)
+    .use(usersModule);
 
 api.listen(env.API_PORT, (server: Server): void => {
     logger.info(`API server is running at ${server.url}`);

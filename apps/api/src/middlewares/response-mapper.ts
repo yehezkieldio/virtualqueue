@@ -2,7 +2,7 @@ import Elysia, {} from "elysia";
 import { getStatusName } from "#utils/error";
 import type { ErrorResponse, SuccessResponse } from "#utils/response";
 
-const excludePaths: string[] = ["/health", "/reference"];
+const excludePaths: string[] = ["/health", "/reference", "/metrics"];
 
 function shouldExcludePath(path: string): boolean {
     const normalizedPath: string = path.replace(/\/+$/, "");
