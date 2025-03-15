@@ -276,8 +276,9 @@ export const usersModule = new Elysia({ name: "Module.User", tags: ["Users"] }).
                     throw ctx.error("Not Found", "User not found.");
                 }
 
-                if (ctx.body.oldPassword === ctx.body.password) {
-                    throw ctx.error("Bad Request", "New password must be different from the old password.");
+                const isValidPassword = await Bun.password.verify(ctx.body.oldPassword, existingUser.password);
+                if (!isValidPassword) {
+                    throw ctx.error("Bad Request", "Current password is incorrect.");
                 }
 
                 if (!validatePassword(ctx.body.password)) {
