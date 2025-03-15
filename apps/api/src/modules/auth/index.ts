@@ -23,7 +23,7 @@ export const authModule = new Elysia({ name: "Module.Auth", tags: ["Auth"] }).gr
                     return await record("auth.signin", async () => {
                         const user = await record("database.users.first", async () => {
                             return await db.query.users.findFirst({
-                                where: and(eq(users.id, body.email), isNull(users.deletedAt)),
+                                where: and(eq(users.email, body.email), isNull(users.deletedAt)),
                                 columns: {
                                     deletedAt: false,
                                 },

@@ -39,13 +39,6 @@ export const authMiddleware = new Elysia({ name: "Middleware.Auth" }).use(
             throw error("Forbidden", "Token expired");
         }
 
-        const ttl: number = jwtPayload.exp - Math.floor(Date.now() / 1000);
-        if (ttl > 0) {
-            await record("dragonfly.blacklist.add", async () =>
-                dragonfly.set(`blacklist:access:${accessToken.value}`, "1", "EX", ttl)
-            );
-        }
-
         return {
             user: jwtPayload,
             accessToken: accessToken.value,
