@@ -45,7 +45,6 @@ export function useLoggerMiddleware() {
         .onAfterHandle({ as: "global" }, (ctx) => {
             const method: string = c("bold")(ctx.request.method.padEnd(4));
             let url: string = c("white")(new URL(ctx.request.url).pathname.padEnd(4));
-            logger.info(`hello ${ctx.set.status}`);
             const statusCode: string = c("bold")(formatStatus(ctx.set.status));
             const duration: string = c("gray")(`${formatTime(Date.now() - (ctx.startTime || Date.now()))}`);
 

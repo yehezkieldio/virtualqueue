@@ -1,4 +1,7 @@
+import { opentelemetry } from "@elysiajs/opentelemetry";
 import swagger from "@elysiajs/swagger";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
 import { env } from "@virtualqueue/environment";
 import { Elysia, t } from "elysia";
 import type { Server } from "elysia/universal";
@@ -6,10 +9,8 @@ import { logger } from "#utils/logger";
 import { useLoggerMiddleware } from "./middlewares/logger";
 import { useResponseMapperMiddleware } from "./middlewares/response-mapper";
 import { usersModule } from "./modules/users";
-import { requestDurationHistogram, startResourceMetricsCollection, useMetricsMiddleware, useOpenTelemetryMiddleware } from "./utils/telemetry";
 
 logger.info("Starting API server...");
-startResourceMetricsCollection();
 
 const healthModule = new Elysia().get(
     "/health",
@@ -55,24 +56,17 @@ const swaggerConfig = {
     },
 };
 
-export const api = new Elysia()
-    .use(useOpenTelemetryMiddleware())
+const openTelemetryConfig = {
+    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+};
+
+const api = new Elysia()
     .use(useLoggerMiddleware())
     .use(useResponseMapperMiddleware())
-    .use(useMetricsMiddleware())
-    .onAfterHandle(({ request, set, startTime }) => {
-        if (startTime) {
-            const duration = (Date.now() - startTime) / 1000;
-            requestDurationHistogram.record(duration, {
-                method: request.method,
-                path: new URL(request.url).pathname,
-                status_code: set.status?.toString() || "200",
-            });
-        }
-    })
+    .use(opentelemetry(openTelemetryConfig))
     .use(swagger(swaggerConfig))
-    .use(healthModule)
-    .use(usersModule);
+    .use(usersModule)
+    .use(healthModule);
 
 api.listen(env.API_PORT, (server: Server): void => {
     logger.info(`API server is running at ${server.url}`);
