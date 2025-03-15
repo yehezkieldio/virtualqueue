@@ -1,0 +1,17 @@
+{
+    "name": "@virtualqueue/dragonfly",
+    "version": "0.0.0",
+    "dependencies": {
+        "@virtualqueue/environment": "workspace:*",
+        "ioredis": "^5.6.0"
+    },
+    "devDependencies": {
+        "@virtualqueue/typescript": "workspace:*"
+    },
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    }
+}
