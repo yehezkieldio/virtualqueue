@@ -14,7 +14,7 @@ export const env = createEnv({
         API_HOST: z.string().default("localhost"),
         API_PORT: z.string().default("3001"),
         DRAGONFLY_HOST: z.string().default("localhost"),
-        DRAGONFLY_PORT: z.number().default(6379),
+        DRAGONFLY_PORT: z.coerce.number().default(6379),
         TRACE_LOG: z.coerce.boolean().default(false),
     },
     clientPrefix: "PUBLIC_",

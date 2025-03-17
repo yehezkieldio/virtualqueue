@@ -1,6 +1,6 @@
-import { opentelemetry } from "@elysiajs/opentelemetry";
+import { ElysiaOpenTelemetryOptions, opentelemetry } from "@elysiajs/opentelemetry";
 import swagger from "@elysiajs/swagger";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-grpc";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
 import { env } from "@virtualqueue/environment";
 import { Elysia, t } from "elysia";
@@ -10,7 +10,9 @@ import { startMetrics, useMetricsMiddleware } from "#utils/metrics";
 import { useLoggerMiddleware } from "./middlewares/logger";
 import { useResponseMapperMiddleware } from "./middlewares/response-mapper";
 import { usersModule } from "./modules/users";
+import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 logger.info("Starting API server...");
 startMetrics();
 
@@ -62,8 +64,13 @@ const swaggerConfig = {
     },
 };
 
-const openTelemetryConfig = {
-    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+const openTelemetryConfig: ElysiaOpenTelemetryOptions = {
+    // spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+    serviceName: "virtualqueue-api",
+    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter({
+        // url: 'http://localhost:4318/v1/traces', // Tempo OTLP HTTP endpoint
+        url: "grpc://tempo:4317"
+    }))],
 };
 
 const api = new Elysia()
