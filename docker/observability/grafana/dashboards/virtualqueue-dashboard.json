@@ -24,7 +24,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eefwa7698xn9cc"
+                "uid": "prometheus"
             },
             "fieldConfig": {
                 "defaults": {
@@ -122,7 +122,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eefwa7698xn9cc"
+                "uid": "prometheus"
             },
             "fieldConfig": {
                 "defaults": {
@@ -205,7 +205,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eefwa7698xn9cc"
+                        "uid": "prometheus"
                     },
                     "disableTextWrap": false,
                     "editorMode": "builder",
@@ -224,7 +224,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eefwa7698xn9cc"
+                "uid": "prometheus"
             },
             "fieldConfig": {
                 "defaults": {
@@ -322,7 +322,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eefwa7698xn9cc"
+                "uid": "prometheus"
             },
             "fieldConfig": {
                 "defaults": {

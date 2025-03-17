@@ -4,8 +4,26 @@ datasources:
   - name: prometheus
     type: prometheus
     access: proxy
-    uid: eefwa7698xn9cc
+    uid: prometheus
     url: http://prometheus:9090
     isDefault: true
     editable: false
     version: 1
+  - name: Tempo
+    type: tempo
+    access: proxy
+    uid: tempo
+    url: http://tempo:3200
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: "prometheus" # Prometheus UID
+        tags: [job, instance, service_name]
+        mappedTags: [{ key: "service.name", value: "service_name" }]
+        mapTagNamesEnabled: true
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
+        filterByTraceID: true
+        filterBySpanID: true
+      serviceMap:
+        datasourceUid: "prometheus" # Prometheus UID
