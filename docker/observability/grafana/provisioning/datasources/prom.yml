@@ -27,3 +27,16 @@ datasources:
         filterBySpanID: true
       serviceMap:
         datasourceUid: "prometheus" # Prometheus UID
+  - name: Loki
+    type: loki
+    access: proxy
+    uid: loki
+    url: http://loki:3100
+    editable: false
+    version: 1
+    jsonData:
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "traceID=(\\w+)"
+          name: TraceID
+          url: $${__value.raw}

@@ -85,6 +85,31 @@ services:
       - "9411:9411"   # zipkin
     networks:
       - virtualqueue-network
+  loki:
+    image: grafana/loki:latest
+    container_name: virtualqueue-loki
+    profiles: [observability]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki:/etc/loki
+      - loki_data:/loki
+    command: -config.expand-env=true -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - virtualqueue-network
+  promtail:
+    image: grafana/promtail:latest
+    container_name: virtualqueue-promtail
+    profiles: [observability]
+    volumes:
+      - ./observability/promtail:/etc/promtail
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - virtualqueue-network
+    depends_on:
+      - loki
   # jaeger:
   #   image: jaegertracing/all-in-one:latest
   #   container_name: virtualqueue-jaeger
@@ -128,6 +153,8 @@ volumes:
     name: virtualqueue-grafana-data
   dragonfly_data:
     name: virtualqueue-dragonfly-data
+  loki_data:
+    name: virtualqueue-loki-data
 
 networks:
   virtualqueue-network:

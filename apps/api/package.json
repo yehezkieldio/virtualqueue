@@ -18,7 +18,8 @@
         "@virtualqueue/dragonfly": "workspace:*",
         "@virtualqueue/environment": "workspace:*",
         "drizzle-typebox": "^0.3.0",
-        "elysia": "^1.2.25"
+        "elysia": "^1.2.25",
+        "ofetch": "^1.4.1"
     },
     "devDependencies": {
         "@virtualqueue/typescript": "workspace:*",

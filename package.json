@@ -1,6 +1,13 @@
 {
     "name": "@virtualqueue/source",
-    "type": "module",
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@types/bun": "^1.2.5",
+        "@types/node": "^22.13.10",
+        "turbo": "^2.4.4",
+        "typescript": "^5.8.2"
+    },
+    "packageManager": "bun@1.2.6",
     "private": true,
     "scripts": {
         "build": "turbo build",
@@ -30,13 +37,6 @@
         "compose:all:restart": "docker compose -f ./docker/docker-compose.yml --profile development --profile observability restart",
         "compose": "docker compose -f ./docker/docker-compose.yml"
     },
-    "workspaces": ["apps/*", "packages/*"],
-    "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
-        "@types/bun": "^1.2.5",
-        "@types/node": "^22.13.10",
-        "turbo": "^2.4.4",
-        "typescript": "^5.8.2"
-    },
-    "packageManager": "bun@1.2.6"
+    "type": "module",
+    "workspaces": ["apps/*", "packages/*"]
 }
